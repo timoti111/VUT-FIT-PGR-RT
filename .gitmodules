@@ -1,0 +1,15 @@
+[submodule "libs/glfw"]
+	path = libs/glfw
+	url = git@github.com:glfw/glfw.git
+[submodule "libs/Vars"]
+	path = libs/Vars
+	url = git@github.com:dormon/Vars.git
+[submodule "libs/geGL"]
+	path = libs/geGL
+	url = git@github.com:dormon/geGL.git
+[submodule "libs/glm"]
+	path = libs/glm
+	url = git@github.com:g-truc/glm.git
+[submodule "libs/imgui"]
+	path = libs/imgui
+	url = git@github.com:ocornut/imgui.git
