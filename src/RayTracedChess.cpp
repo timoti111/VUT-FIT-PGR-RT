@@ -3,17 +3,21 @@
 #include <cmath>
 #include <glm/geometric.hpp>
 #include <glm/trigonometric.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include "Utils/filetostring.h"
 #include <geGL/StaticCalls.h>
+#include "imgui.h"
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "Utils/tiny_obj_loader.h"
 
 RayTracedChess::RayTracedChess() : Application()
 {
     vars.add<ge::gl::Program>("computeProgram",
-        std::make_shared<ge::gl::Shader>(GL_COMPUTE_SHADER, Utils::readFileToString("res/shaders/computeShader.glsl")));
+        std::make_shared<ge::gl::Shader>(GL_COMPUTE_SHADER, Utils::readFileToString("res/shaders/computeShader.comp")));
     vars.add<ge::gl::Program>("basicDrawProgram",
-        std::make_shared<ge::gl::Shader>(GL_VERTEX_SHADER, Utils::readFileToString("res/shaders/basicVertexShader.glsl")),
-        std::make_shared<ge::gl::Shader>(GL_FRAGMENT_SHADER, Utils::readFileToString("res/shaders/basicFragmentShader.glsl")));
-;
+        std::make_shared<ge::gl::Shader>(GL_VERTEX_SHADER, Utils::readFileToString("res/shaders/basicVertexShader.vert")),
+        std::make_shared<ge::gl::Shader>(GL_FRAGMENT_SHADER, Utils::readFileToString("res/shaders/basicFragmentShader.frag")));
+    ;
     float data[] = { -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f };
     vars.add<ge::gl::Buffer>("backgroundQuad", sizeof(float) * 8, data);
     vars.add<ge::gl::VertexArray>("backgroundVAO")->addAttrib(
@@ -29,11 +33,36 @@ RayTracedChess::RayTracedChess() : Application()
     initComputeShaderImage();
 
     GLint workGroupSize[3];
-    vars.get<ge::gl::Program>("computeProgram")->getContext().glGetProgramiv(vars.get<ge::gl::Program>("computeProgram")->getId(), GL_COMPUTE_WORK_GROUP_SIZE, workGroupSize);
-    workGroupSizeX = workGroupSize[0];
-    workGroupSizeY = workGroupSize[1];
-    workGroupSizeZ = workGroupSize[2];
+    ge::gl::glGetProgramiv(vars.get<ge::gl::Program>("computeProgram")->getId(), GL_COMPUTE_WORK_GROUP_SIZE, workGroupSize);
+    vars.addInt32("workGroupSizeX", workGroupSize[0]);
+    vars.addInt32("workGroupSizeY", workGroupSize[1]);
+    vars.addInt32("workGroupSizeZ", workGroupSize[2]);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+
+    std::string warn;
+    std::string err;
+    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, "res/models/bunny.obj");
+    auto vertices = vars.add<std::vector<glm::vec4>>("vertices");
+    auto indices = vars.add<std::vector<GLuint>>("indices");
+    auto meshes = vars.add<std::vector<MeshObject>>("meshes");
+    auto identity = glm::mat4x4(1.0f);
+
+    for (size_t i = 0; i < attrib.vertices.size(); i += 3)
+        vertices->push_back(glm::vec4(attrib.vertices[i], attrib.vertices[i + 1], attrib.vertices[i + 2], 1.0f));
+
+    for (auto& shape : shapes) {
+        meshes->push_back(MeshObject{ identity, (GLuint)indices->size(), (GLuint)shape.mesh.indices.size() });
+        for (auto& indice : shape.mesh.indices)
+            indices->push_back(indice.vertex_index);
+    }
+
+    vars.add<ge::gl::Buffer>("verticeBuffer", *vertices)->bindBase(GL_SHADER_STORAGE_BUFFER, 3);
+    vars.add<ge::gl::Buffer>("indiceBuffer", *indices)->bindBase(GL_SHADER_STORAGE_BUFFER, 4);
+    vars.add<ge::gl::Buffer>("meshBuffer", *meshes)->bindBase(GL_SHADER_STORAGE_BUFFER, 5);
 }
 
 void RayTracedChess::initComputeShaderImage()
@@ -48,18 +77,25 @@ void RayTracedChess::initComputeShaderImage()
 
 void RayTracedChess::draw()
 {
-    camera.update();
-    vars.get<ge::gl::Program>("computeProgram")->set("camera.direction", camera.getDirection().x, camera.getDirection().y, camera.getDirection().z);
-    vars.get<ge::gl::Program>("computeProgram")->set("camera.up", camera.getUp().x, camera.getUp().y, camera.getUp().z);
-    vars.get<ge::gl::Program>("computeProgram")->set("camera.left", camera.getLeft().x, camera.getLeft().y, camera.getLeft().z);
-    vars.get<ge::gl::Program>("computeProgram")->set("camera.position", camera.getPosition().x, camera.getPosition().y, camera.getPosition().z);
-    vars.get<ge::gl::Program>("computeProgram")->set("camera.sensorHalfWidth", camera.getSensorHalfWidth());
-    vars.get<ge::gl::Program>("computeProgram")->dispatch(ceil(width / static_cast<float>(workGroupSizeX)), ceil(height / static_cast<float>(workGroupSizeY)), 1);
+    static auto computeProgram = vars.get<ge::gl::Program>("computeProgram");
+    static auto basicDrawProgram = vars.get<ge::gl::Program>("basicDrawProgram");
+    static auto backgroundVAO = vars.get<ge::gl::VertexArray>("backgroundVAO");
+    static auto workGroupSizeXInv = 1.0 / static_cast<float>(vars.getInt32("workGroupSizeX"));
+    static auto workGroupSizeYInv = 1.0 / static_cast<float>(vars.getInt32("workGroupSizeY"));
+    camera.update(deltaTime * speedMultiplier);
+    computeProgram->set("camera.direction", camera.getDirection().x, camera.getDirection().y, camera.getDirection().z);
+    computeProgram->set("camera.up", camera.getUp().x, camera.getUp().y, camera.getUp().z);
+    computeProgram->set("camera.left", camera.getLeft().x, camera.getLeft().y, camera.getLeft().z);
+    computeProgram->set("camera.position", camera.getPosition().x, camera.getPosition().y, camera.getPosition().z);
+    computeProgram->set("camera.sensorHalfWidth", camera.getSensorHalfWidth());
+    computeProgram->dispatch(ceil(width * workGroupSizeXInv), ceil(height * workGroupSizeYInv), 1);
 
-    vars.get<ge::gl::VertexArray>("backgroundVAO")->bind();
-    vars.get<ge::gl::Program>("basicDrawProgram")->use();
+    ge::gl::glFinish();
+
+    backgroundVAO->bind();
+    basicDrawProgram->use();
     ge::gl::glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    vars.get<ge::gl::VertexArray>("backgroundVAO")->unbind();
+    backgroundVAO->unbind();
 
     drawGui(drawGuiB);
 
@@ -68,6 +104,14 @@ void RayTracedChess::draw()
 
 void RayTracedChess::mouseButtonEvent(int button, int action, int mods)
 {
+}
+
+void RayTracedChess::mouseScrollEvent(double xoffset, double yoffset)
+{
+    if (yoffset > 0)
+        speedMultiplier *= 1.5;
+    if (yoffset < 0)
+        speedMultiplier /= 1.5;
 }
 
 void RayTracedChess::mouseMoveEvent(double xpos, double ypos)
@@ -112,24 +156,22 @@ void RayTracedChess::mouseMoveEvent(double xpos, double ypos)
 void RayTracedChess::keyEvent(int key, int scancode, int action, int mods)
 {
     static int moveMultiplier = 20;
+    bool pressed = action == GLFW_PRESS;
+    bool repeat = action == GLFW_REPEAT;
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
     if (key == GLFW_KEY_G && action == GLFW_PRESS) {
         drawGuiB = !drawGuiB;
         glfwSetInputMode(window, GLFW_CURSOR, drawGuiB ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
     }
-    if (key == GLFW_KEY_W && (action == GLFW_REPEAT || action == GLFW_PRESS))
-        camera.moveCamera(camera.getDirection(), deltaTime * moveMultiplier);
-    if (key == GLFW_KEY_A && (action == GLFW_REPEAT || action == GLFW_PRESS))
-        camera.moveCamera(camera.getLeft(), deltaTime * moveMultiplier);
-    if (key == GLFW_KEY_S && (action == GLFW_REPEAT || action == GLFW_PRESS))
-        camera.moveCamera(camera.getDirection(), -deltaTime * moveMultiplier);
-    if (key == GLFW_KEY_D && (action == GLFW_REPEAT || action == GLFW_PRESS))
-        camera.moveCamera(camera.getLeft(), -deltaTime * moveMultiplier);
-    if (key == GLFW_KEY_Q && (action == GLFW_REPEAT || action == GLFW_PRESS))
-        camera.moveCamera(camera.getUp(), deltaTime * moveMultiplier);
-    if (key == GLFW_KEY_E && (action == GLFW_REPEAT || action == GLFW_PRESS))
-        camera.moveCamera(camera.getUp(), -deltaTime * moveMultiplier);
+    if (key == GLFW_KEY_W && !repeat)
+        camera.moveFront(pressed);
+    if (key == GLFW_KEY_A && !repeat)
+        camera.moveLeft(pressed);
+    if (key == GLFW_KEY_S && !repeat)
+        camera.moveBack(pressed);
+    if (key == GLFW_KEY_D && !repeat)
+        camera.moveRight(pressed);
 }
 
 void RayTracedChess::resizeEvent(int x, int y)

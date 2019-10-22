@@ -47,8 +47,6 @@ set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT $
 # link_directories("lib")
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/res DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
-
-
 function(getSharedLibraries out lib cfg)
   if(TARGET ${lib})
     get_target_property(target_type ${lib} TYPE)

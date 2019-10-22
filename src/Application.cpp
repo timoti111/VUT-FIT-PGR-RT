@@ -2,9 +2,7 @@
 #include "imgui.h"
 #include "examples/imgui_impl_opengl3.h"
 #include "examples/imgui_impl_glfw.h"
-#include <iostream>
 #include <stdexcept>
-#include <functional>
 
 Application::Application()
 {
@@ -35,7 +33,6 @@ Application::Application()
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
-    ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
@@ -56,7 +53,6 @@ void Application::start()
     GLFWscrollfun f2 = static_cast<GLFWscrollfun>(Callback<void(GLFWwindow*, double, double)>::callback);
     glfwSetScrollCallback(window, f2);
 
-
     Callback<void(GLFWwindow*, double, double)>::func = std::bind(&Application::mouseMoveEvent, this, _2, _3);
     GLFWcursorposfun f3 = static_cast<GLFWcursorposfun>(Callback<void(GLFWwindow*, double, double)>::callback);
     glfwSetCursorPosCallback(window, f3);
@@ -65,11 +61,9 @@ void Application::start()
     GLFWmousebuttonfun f4 = static_cast<GLFWmousebuttonfun>(Callback<void(GLFWwindow*, int, int, int)>::callback);
     glfwSetMouseButtonCallback(window, f4);
 
-
     Callback<void(GLFWwindow*, int, int, int, int)>::func = std::bind(&Application::keyEvent, this, _2, _3, _4, _5);
     GLFWkeyfun f5 = static_cast<GLFWkeyfun>(Callback<void(GLFWwindow*, int, int, int, int)>::callback);
     glfwSetKeyCallback(window, f5);
-
 
     init();
     while (!glfwWindowShouldClose(window))

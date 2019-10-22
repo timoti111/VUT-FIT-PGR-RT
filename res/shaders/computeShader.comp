@@ -1,0 +1,233 @@
+#version 430
+#define FLT_MAX 3.402823466e+38
+#define FLT_MIN 1.175494351e-38
+
+struct Camera {
+    vec3 position;
+    vec3 direction;
+    vec3 up;
+    vec3 left;
+    float sensorHalfWidth;
+};
+
+uniform Camera camera;
+
+struct MeshObject
+{
+    mat4 localToWorldMatrix;
+    uint indices_offset;
+    uint indices_count;
+    uint padding1;
+    uint padding2;
+};
+
+layout(binding = 1) writeonly uniform image2D destTex;
+layout(binding = 2) uniform sampler2D hdriTexture;
+layout(std430, binding = 3) buffer VerticeBuffer { vec4 vertices[]; };
+layout(std430, binding = 4) buffer IndiceBuffer { uint indices[]; };
+layout(std430, binding = 5) buffer MeshBuffer { MeshObject meshes[]; };
+
+struct Ray {
+    vec3 origin;
+    vec3 direction;
+    vec3 energy;
+};
+
+Ray CreateRay(vec3 origin, vec3 direction)
+{
+    Ray ray;
+    ray.origin = origin;
+    ray.direction = direction;
+    ray.energy = vec3(1.0);
+    return ray;
+}
+
+Ray CreateCameraRay(vec2 pixel, ivec2 size)
+{
+    float sensorHalfHeight = (size.y * camera.sensorHalfWidth) / size.x;
+    float pixelSize = camera.sensorHalfWidth / (size.x * 0.5);
+    vec3 direction = normalize(camera.direction + camera.left * (camera.sensorHalfWidth - (pixel.x + 0.5) * pixelSize) + camera.up * ((pixel.y + 0.5) * pixelSize - sensorHalfHeight));
+    return CreateRay(camera.position, direction);
+}
+
+struct RayHit {
+    float t;
+    vec3 position;
+    vec3 normal;
+    vec3 albedo;
+    vec3 specular;
+};
+
+RayHit CreateRayHit()
+{
+    RayHit hit;
+    hit.position = vec3(0.0f);
+    hit.t = FLT_MAX;
+    hit.normal = vec3(0.0f);
+    hit.albedo = vec3(0.0f);
+    hit.specular = vec3(0.0f);
+    return hit;
+};
+
+void IntersectGroundPlane(Ray ray, inout RayHit bestHit)
+{
+    // Calculate distance along the ray where the ground plane is intersected
+    float t = -ray.origin.y / ray.direction.y;
+    if (t > 0 && t < bestHit.t)
+    {
+        bestHit.t = t;
+        bestHit.position = ray.origin + t * ray.direction;
+        bestHit.normal = vec3(0.0f, 1.0f, 0.0f);
+        bestHit.albedo = vec3(0.9f);
+        bestHit.specular = vec3(0.1f);
+    }
+}
+
+void IntersectSphere(Ray ray, inout RayHit bestHit, vec4 sphere) {
+    // Calculate distance along the ray where the sphere is intersected
+    vec3 d = ray.origin - sphere.xyz;
+    float p1 = -dot(ray.direction, d);
+    float p2sqr = p1 * p1 - dot(d, d) + sphere.w * sphere.w;
+    if (p2sqr < 0)
+        return;
+    float p2 = sqrt(p2sqr);
+    float t = p1 - p2 > 0 ? p1 - p2 : p1 + p2;
+    if (t > 0 && t < bestHit.t)
+    {
+        bestHit.t = t;
+        bestHit.position = ray.origin + t * ray.direction;
+        bestHit.normal = normalize(bestHit.position - sphere.xyz);
+        bestHit.albedo = vec3(0.5);
+        bestHit.specular = vec3(0.3);
+    }
+}
+
+const float EPSILON = 1e-8;
+bool IntersectTriangle_MT97(Ray ray, vec3 vert0, vec3 vert1, vec3 vert2,
+    inout float t, inout float u, inout float v)
+{
+    // find vectors for two edges sharing vert0
+    vec3 edge1 = vert1 - vert0;
+    vec3 edge2 = vert2 - vert0;
+    // begin calculating determinant - also used to calculate U parameter
+    vec3 pvec = cross(ray.direction, edge2);
+    // if determinant is near zero, ray lies in plane of triangle
+    float det = dot(edge1, pvec);
+    // use backface culling
+    if (det < EPSILON)
+        return false;
+    float inv_det = 1.0f / det;
+    // calculate distance from vert0 to ray origin
+    vec3 tvec = ray.origin - vert0;
+    // calculate U parameter and test bounds
+    u = dot(tvec, pvec) * inv_det;
+    if (u < 0.0 || u > 1.0f)
+        return false;
+    // prepare to test V parameter
+    vec3 qvec = cross(tvec, edge1);
+    // calculate V parameter and test bounds
+    v = dot(ray.direction, qvec) * inv_det;
+    if (v < 0.0 || u + v > 1.0f)
+        return false;
+    // calculate t, ray intersects triangle
+    t = dot(edge2, qvec) * inv_det;
+    return true;
+}
+
+void IntersectMeshObject(Ray ray, inout RayHit bestHit, MeshObject meshObject)
+{
+    uint offset = meshObject.indices_offset;
+    uint count = offset + meshObject.indices_count;
+    for (uint i = offset; i < count; i += 3)
+    {
+        uint i0 = indices[i];
+        uint i1 = indices[i + 1];
+        uint i2 = indices[i + 2];
+        vec3 v0 = (meshObject.localToWorldMatrix * vertices[i0]).xyz;
+        vec3 v1 = (meshObject.localToWorldMatrix * vertices[i1]).xyz;
+        vec3 v2 = (meshObject.localToWorldMatrix * vertices[i2]).xyz;
+        float t, u, v;
+        if (IntersectTriangle_MT97(ray, v0, v1, v2, t, u, v))
+        {
+            if (t > 0 && t < bestHit.t)
+            {
+                bestHit.t = t;
+                bestHit.position = ray.origin + t * ray.direction;
+                bestHit.normal = normalize(cross(v1 - v0, v2 - v0));
+                bestHit.albedo = vec3(0.5f);
+                bestHit.specular = vec3(0.3f);
+            }
+        }
+    }
+}
+
+RayHit Trace(Ray ray)
+{
+    RayHit bestHit = CreateRayHit();
+
+    IntersectGroundPlane(ray, bestHit);
+    for (int i = 0; i < meshes.length(); i++)
+        IntersectMeshObject(ray, bestHit, meshes[i]);
+
+    return bestHit;
+}
+
+const float PI = 3.14159265f;
+vec3 Shade(inout Ray ray, RayHit hit)
+{
+    if (hit.t < FLT_MAX)
+    {
+        vec4 directionalLight = vec4(-2.0, 5.0, 10.0, 1.0);
+        // Reflect the ray and multiply energy with specular reflection
+        ray.origin = hit.position + hit.normal * 0.001f;
+        ray.direction = reflect(ray.direction, hit.normal);
+        vec3 rayDirection = normalize(directionalLight.xyz - ray.origin);
+        // Return nothing// Shadow test ray
+        bool shadow = false;
+        Ray shadowRay = CreateRay(hit.position + hit.normal * 0.001f, rayDirection);
+        RayHit shadowHit = Trace(shadowRay);
+        if (shadowHit.t != FLT_MAX)
+        {
+            return vec3(0.0f);
+        }
+        return clamp(dot(hit.normal, rayDirection), 0.0, 1.0) * directionalLight.w * hit.albedo;
+    }
+    else
+    {
+        float theta = acos(ray.direction.y) / -PI;
+        float phi = atan(ray.direction.x, -ray.direction.z) / -PI * 0.5f;
+        vec3 image = texture(hdriTexture, vec2(1 - phi, 1 - theta)).xyz;
+        return vec3(sqrt(image.x), sqrt(image.y), sqrt(image.z));
+    }
+}
+
+float seed = 0.0;
+float rand(ivec2 pixel)
+{
+    float result = fract(sin(seed / 100.0f * dot(vec2(pixel), vec2(12.9898f, 78.233f))) * 43758.5453f);
+    seed += 1.0f;
+    return result;
+}
+
+layout(local_size_x = 8, local_size_y = 8) in;
+void main() {
+    ivec2 storePos = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(destTex);
+    if (storePos.x >= size.x || storePos.y >= size.y) {
+        return;
+    }
+
+    vec3 result = vec3(0.0f);
+
+    Ray ray = CreateCameraRay(vec2(storePos.x, storePos.y), size);
+    for (int i = 0; i < 1; i++)
+    {
+        RayHit hit = Trace(ray);
+        result += ray.energy * Shade(ray, hit);
+        if (hit.t == FLT_MAX || all(equal(ray.energy, vec3(0.0f)))) {
+            break;
+        }
+        ray.energy *= hit.specular;
+    }
+    imageStore(destTex, storePos, vec4(result, 1.0));
+}

@@ -6,7 +6,10 @@ class Camera {
 public:
     Camera();
 
-    void moveCamera(glm::vec3& direction, float delta);
+    void moveLeft(bool moving);
+    void moveRight(bool moving);
+    void moveFront(bool moving);
+    void moveBack(bool moving);
     void rotateCamera(float yaw, float pitch);
     void setFov(float fov);
     void setAperture(float aperture);
@@ -17,10 +20,11 @@ public:
     glm::vec3& getLeft();
     float getSensorHalfWidth();
     void drawImGui();
-    void update();
+    void update(double timeStep);
     void setDirection(glm::vec3 direction);
 
 private:
+    glm::vec3 acceleration;
     glm::vec3 position;
     glm::vec3 direction;
     glm::vec3 up;
@@ -30,4 +34,8 @@ private:
     float aperture;
     float focusDistance;
     float focalLength = 0.00035f;
+    bool movingLeft = false;
+    bool movingRight = false;
+    bool movingFront = false;
+    bool movingBack = false;
 };

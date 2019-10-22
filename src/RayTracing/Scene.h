@@ -1,4 +1,6 @@
 #pragma once
+#include <geGL/geGL.h>
+#include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
 #include <vector>
@@ -19,4 +21,11 @@ public:
     void generateScene();
 private:
     std::vector<Sphere> spheres;
+};
+
+struct alignas(16) MeshObject
+{
+    glm::mat4x4 localToWorldMatrix;
+    GLuint indices_offset;
+    GLuint indices_count;
 };

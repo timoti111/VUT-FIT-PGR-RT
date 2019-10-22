@@ -1,6 +1,5 @@
 #pragma once
 
-#include <stdio.h>
 #include <functional>
 #include <geGL/geGL.h>
 #include "GLFW/glfw3.h"
@@ -9,8 +8,8 @@ class Application {
 public:
     Application();
     virtual ~Application() {};
-    void         start();
-    double       getDeltaTime();
+    void start();
+    double getDeltaTime();
     void swap();
     virtual void mouseScrollEvent(double xoffset, double yoffset) {};
     virtual void mouseMoveEvent(double xpos, double ypos) {};

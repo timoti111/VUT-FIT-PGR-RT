@@ -6,18 +6,34 @@
 
 Camera::Camera()
 {
-    this->position = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
-    this->direction = glm::vec4(0.0f, 0.0f, -1.0f, 0.0f);
-    this->up = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
-    this->left = glm::vec4(-1.0f, 0.0f, 0.0f, 0.0f);
+    this->position = glm::vec3(0.0f, 1.0f, 2.0f);
+    this->direction = glm::vec3(0.0f, 0.0f, -1.0f);
+    this->up = glm::vec3(0.0f, 1.0f, 0.0f);
+    this->left = glm::vec3(-1.0f, 0.0f, 0.0f);
+    this->acceleration = glm::vec3(0.0f, 0.0f, 0.0f);
     this->aperture;
     this->focusDistance;
     setFov(110.0f);
 }
 
-void Camera::moveCamera(glm::vec3& direction, float delta)
+void Camera::moveLeft(bool moving)
 {
-    this->position += direction * delta;
+    movingLeft = moving;
+}
+
+void Camera::moveRight(bool moving)
+{
+    movingRight = moving;
+}
+
+void Camera::moveFront(bool moving)
+{
+    movingFront = moving;
+}
+
+void Camera::moveBack(bool moving)
+{
+    movingBack = moving;
 }
 
 void Camera::rotateCamera(float yaw, float pitch)
@@ -65,13 +81,14 @@ float Camera::getSensorHalfWidth()
 void Camera::drawImGui()
 {
     ImGui::Begin("Camera Settings");
-    ImGui::SliderFloat("float", &fov, 10.0f, 130.0f);
+    ImGui::SliderFloat("float", &fov, 10.0f, 180.0f);
     ImGui::End();
 }
 
-void Camera::update()
+void Camera::update(double timeStep)
 {
     sensorHalfWidth = glm::tan(glm::radians(fov * 0.5f));
+    this->position += (this->direction * (float)movingFront - this->direction * (float)movingBack + this->left * (float)movingLeft - this->left * (float)movingRight) * (float)timeStep;
 }
 
 void Camera::setDirection(glm::vec3 direction)
