@@ -24,7 +24,8 @@ private:
     void drawGui(bool drawGui);
     double speedMultiplier = 1.0;
 
-    bool drawGuiB = false;
+    bool drawGuiB = true;
+    bool resetTexture = false;
     Camera camera;
     HDRLoaderResult backgroundTexture;
 };

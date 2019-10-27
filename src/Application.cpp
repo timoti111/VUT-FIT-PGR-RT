@@ -22,7 +22,7 @@ Application::Application()
         throw std::runtime_error("Failed to create GLFW window");
     }
     glfwMakeContextCurrent(window);
-    //glfwSwapInterval(1); // Enable vsync
+    glfwSwapInterval(0); // Disable vsync
 
     ge::gl::init((ge::gl::GET_PROC_ADDRESS)glfwGetProcAddress);
     ge::gl::setHighDebugMessage();
@@ -38,7 +38,7 @@ Application::Application()
 
     io.Fonts->AddFontFromFileTTF("res/fonts/Roboto-Medium.ttf", 16.0f);
 
-    glViewport(0, 0, 800, 600);
+    glViewport(0, 0, width, height);
 }
 
 void Application::start()

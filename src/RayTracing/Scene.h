@@ -26,6 +26,6 @@ private:
 struct alignas(16) MeshObject
 {
     glm::mat4x4 localToWorldMatrix;
-    GLuint indices_offset;
-    GLuint indices_count;
+    GLint indices_offset;
+    GLint indices_count;
 };

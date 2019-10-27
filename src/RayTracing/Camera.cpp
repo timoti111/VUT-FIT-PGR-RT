@@ -6,14 +6,14 @@
 
 Camera::Camera()
 {
-    this->position = glm::vec3(0.0f, 1.0f, 2.0f);
+    this->position = glm::vec3(0.0f, 2.0f, 4.0f);
     this->direction = glm::vec3(0.0f, 0.0f, -1.0f);
     this->up = glm::vec3(0.0f, 1.0f, 0.0f);
     this->left = glm::vec3(-1.0f, 0.0f, 0.0f);
     this->acceleration = glm::vec3(0.0f, 0.0f, 0.0f);
     this->aperture;
     this->focusDistance;
-    setFov(110.0f);
+    setFov(90.0f);
 }
 
 void Camera::moveLeft(bool moving)

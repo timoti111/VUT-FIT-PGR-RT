@@ -26,7 +26,7 @@ protected:
     GLFWwindow* window = nullptr;
     double deltaTime = 0.0f;
     double lastFrameTime = 0.0f;
-    int width = 800, height = 600;
+    int width = 1280, height = 720;
 };
 
 template <typename T>
