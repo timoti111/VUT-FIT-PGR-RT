@@ -98,10 +98,10 @@ float convertComponent(int expo, int val)
 void workOnRGBE(RGBE* scan, int len, float* cols)
 {
     while (len-- > 0) {
-        int expo = scan[0][E] - 128;
-        cols[0] = convertComponent(expo, scan[0][R]);
-        cols[1] = convertComponent(expo, scan[0][G]);
-        cols[2] = convertComponent(expo, scan[0][B]);
+        float f = ldexp(1.0, scan[0][E] - (128 + 8));
+        cols[0] = f * scan[0][R];
+        cols[1] = f * scan[0][G];
+        cols[2] = f * scan[0][B];
         cols += 3;
         scan++;
     }

@@ -11,14 +11,16 @@ struct Camera
     vec4 left;
     float sensorHalfWidth;
 };
-
-uniform Camera camera;
+layout(binding = 0) uniform Camera camera;
 
 struct Ray
 {
     vec4 origin;
     vec4 direction;
-    vec4 energy;
+};
+layout(std430, binding = 1) buffer PathStateBuffer
+{
+    Ray rays[];
 };
 
 Ray CreateRay(vec4 origin, vec4 direction)
@@ -26,7 +28,6 @@ Ray CreateRay(vec4 origin, vec4 direction)
     Ray ray;
     ray.origin = origin;
     ray.direction = direction;
-    ray.energy = vec4(1.0);
     return ray;
 }
 
@@ -46,11 +47,6 @@ float rand(vec2 seed)
     localSeed += 1.0f + globalSeed;
     return result;
 }
-
-layout(std430, binding = 6) buffer RayBuffer
-{
-    Ray rays[];
-};
 
 uniform ivec2 resolution;
 void main()

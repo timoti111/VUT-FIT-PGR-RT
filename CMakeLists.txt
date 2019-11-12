@@ -6,13 +6,14 @@ cmake_minimum_required(VERSION 3.14)
 PROJECT(RayTracedChess)
 
 SET(CMAKE_CXX_STANDARD 14)
-set(CMAKE_EXPORT_COMPILE_COMMANDS 1 ) 
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1) 
 
 find_package(OpenGL REQUIRED)
 
 add_compile_definitions(IMGUI_USER_CONFIG="imgui/imconfig.h")
 
 file(GLOB_RECURSE RayTracedChess_SRC
+    "src/*.hpp"
     "src/*.h"
     "src/*.cpp"
     "src/*.c"
@@ -26,6 +27,18 @@ file(GLOB ImGUI_SRC
     "libs/imgui/examples/imgui_impl_opengl3.cpp"
     "libs/imgui/examples/imgui_impl_opengl3.h"
 )
+
+if(MSVC)
+  # Force to always compile with W4
+  if(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
+    string(REGEX REPLACE "/W[0-4]" "/W4" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
+  endif()
+elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+  # Update if necessary
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long -pedantic")
+endif()
 
 #target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 add_subdirectory(libs/geGL)

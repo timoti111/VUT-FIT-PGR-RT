@@ -7,8 +7,8 @@
 #include "Utils/filetostring.h"
 #include <geGL/StaticCalls.h>
 #include "imgui.h"
-#define TINYOBJLOADER_IMPLEMENTATION
-#include "Utils/tiny_obj_loader.h"
+#include "bvh/BVH.h"
+#include <glm/gtc/matrix_transform.hpp>
 
 RayTracedChess::RayTracedChess() : Application()
 {
@@ -24,10 +24,11 @@ RayTracedChess::RayTracedChess() : Application()
         vars.get<ge::gl::Buffer>("backgroundQuad"), 0, 2, GL_FLOAT);
 
     HDRLoader::load("res/textures/delta_2_4k.hdr", backgroundTexture);
-    vars.add<ge::gl::Texture>("enviromentTexture", GL_TEXTURE_2D, GL_RGB32F, 0, backgroundTexture.width, backgroundTexture.height)
+    vars.add<ge::gl::Texture>("enviromentTexture", GL_TEXTURE_2D, GL_RGB32F, 10, backgroundTexture.width, backgroundTexture.height)
         ->setData2D(backgroundTexture.cols.data(), GL_RGB, GL_FLOAT);
-    vars.get<ge::gl::Texture>("enviromentTexture")->texParameteri(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    vars.get<ge::gl::Texture>("enviromentTexture")->texParameteri(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    vars.get<ge::gl::Texture>("enviromentTexture")->generateMipmap();
+    vars.get<ge::gl::Texture>("enviromentTexture")->texParameteri(GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    vars.get<ge::gl::Texture>("enviromentTexture")->texParameteri(GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     vars.get<ge::gl::Texture>("enviromentTexture")->bind(2);
 
     initComputeShaderImage();
@@ -39,36 +40,19 @@ RayTracedChess::RayTracedChess() : Application()
     vars.addInt32("workGroupSizeZ", workGroupSize[2]);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;
+    auto ident = glm::mat4x4(1.0f);
+    scene.shapeFromObj("res/models/bunny/bunny.obj", "Bunny");
+    scene.instantiateShape("Bunny", ident);
+    scene.updateBVHs();
 
-    std::string warn;
-    std::string err;
-    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, "res/models/bunny2.obj");
-    auto vertices = vars.add<std::vector<glm::vec4>>("vertices");
-    auto normals = vars.add<std::vector<glm::vec4>>("normals");
-    auto indices = vars.add<std::vector<glm::ivec4>>("indices");
-    auto meshes = vars.add<std::vector<MeshObject>>("meshes");
-    auto identity = glm::mat4x4(1.0f);
-
-    for (size_t i = 0; i < attrib.vertices.size(); i += 3)
-    {
-        vertices->push_back(glm::vec4(attrib.vertices[i], attrib.vertices[i + 1], attrib.vertices[i + 2], 1.0f));
-        normals->push_back(glm::vec4(attrib.normals[i], attrib.normals[i + 1], attrib.normals[i + 2], 0.0f));
-    }
-
-    for (auto& shape : shapes)
-    {
-        meshes->push_back(MeshObject{ identity, (GLint)indices->size(), (GLint)shape.mesh.indices.size() / 3 });
-        for (size_t i = 0; i < shape.mesh.indices.size(); i += 3)
-            indices->push_back(glm::ivec4(shape.mesh.indices[i].vertex_index, shape.mesh.indices[i + 1].vertex_index, shape.mesh.indices[i + 2].vertex_index, 1));
-    }
-
-    vars.add<ge::gl::Buffer>("verticeBuffer", *vertices, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 3);
-    vars.add<ge::gl::Buffer>("indiceBuffer", *indices, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 4);
-    vars.add<ge::gl::Buffer>("meshBuffer", *meshes, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 5);
-    vars.add<ge::gl::Buffer>("normalBuffer", *normals, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 6);
+    vars.add<ge::gl::Buffer>("sceneBVHBuffer", scene.getFlatTree(), GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 3);
+    vars.add<ge::gl::Buffer>("meshBHVs", scene.meshBVHs, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 4);
+    vars.add<ge::gl::Buffer>("meshesBuffer", scene.meshesGPU, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 5);
+    vars.add<ge::gl::Buffer>("primitivesBuffer", scene.primitivesGPU, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 6);
+    vars.add<ge::gl::Buffer>("trianglesBuffer", scene.triangles, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 7);
+    vars.add<ge::gl::Buffer>("verticesBuffer", scene.vertices, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 8);
+    vars.add<ge::gl::Buffer>("normalsBuffer", scene.normals, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 9);
+    vars.add<ge::gl::Buffer>("coordsBuffer", scene.coords, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 10);
 }
 
 void RayTracedChess::initComputeShaderImage()

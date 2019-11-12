@@ -81,14 +81,17 @@ float Camera::getSensorHalfWidth()
 void Camera::drawImGui()
 {
     ImGui::Begin("Camera Settings");
-    ImGui::SliderFloat("float", &fov, 10.0f, 180.0f);
+    ImGui::Text("Field of view");
+    ImGui::SliderFloat("degrees", &fov, 10.0f, 180.0f);
+    ImGui::Text("Movement Speed");
+    ImGui::InputFloat("m/s", &speed, 0.01f, 1.0f, "%.3f");
     ImGui::End();
 }
 
 void Camera::update(double timeStep)
 {
     sensorHalfWidth = glm::tan(glm::radians(fov * 0.5f));
-    this->position += (this->direction * (float)movingFront - this->direction * (float)movingBack + this->left * (float)movingLeft - this->left * (float)movingRight) * (float)timeStep;
+    this->position += (this->direction * (float)movingFront - this->direction * (float)movingBack + this->left * (float)movingLeft - this->left * (float)movingRight) * (float)timeStep * speed;
 }
 
 void Camera::setDirection(glm::vec3 direction)

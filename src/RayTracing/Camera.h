@@ -34,6 +34,7 @@ private:
     float aperture;
     float focusDistance;
     float focalLength = 0.00035f;
+    float speed = 1.0f;
     bool movingLeft = false;
     bool movingRight = false;
     bool movingFront = false;

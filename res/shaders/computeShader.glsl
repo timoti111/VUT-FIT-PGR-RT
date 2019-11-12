@@ -1,8 +1,8 @@
 #version 430
 #define FLT_MAX 3.402823466e+38
 #define FLT_MIN 1.175494351e-38
-#define TRIANGLES 256
-layout(local_size_x = 16, local_size_y = 16) in;
+
+layout(local_size_x = 8, local_size_y = 8) in;
 
 struct Camera
 {
@@ -12,33 +12,75 @@ struct Camera
     vec4 left;
     float sensorHalfWidth;
 };
-
 uniform Camera camera;
-
-struct MeshObject
-{
-    mat4 localToWorldMatrix;
-    int indices_offset;
-    int indices_count;
-};
 
 layout(rgba32f, binding = 1) uniform image2D destTex;
 layout(binding = 2) uniform sampler2D hdriTexture;
-layout(std430, binding = 3) buffer VerticeBuffer
+
+struct BVHNode
+{
+    vec4 minBound;
+    vec4 maxBound;
+    uint start;
+    uint nPrims;
+    uint rightOffset;
+};
+layout(std430, binding = 3) buffer SceneBVHBuffer
+{
+    BVHNode sceneBVH[];
+};
+layout(std430, binding = 4) buffer MeshBVHsBuffer
+{
+    BVHNode meshBVHs[];
+};
+
+struct Mesh
+{
+    mat4x4 objectToWorld;
+    int primitiveOffset;
+    int bvhOffset;
+    int materialID;
+    bool smoothing;
+};
+layout(std430, binding = 5) buffer MeshesBuffer
+{
+    Mesh meshes[];
+};
+
+struct Primitive 
+{
+    int type;
+    int index;
+};
+layout(std430, binding = 6) buffer PrimitivesBuffer
+{
+    Primitive primitives[];
+};
+
+struct Triangle
+{
+    ivec4 vertices;
+    ivec4 normals;
+    ivec4 coords;
+};
+layout(std430, binding = 7) buffer TrianglesBuffer
+{
+    Triangle triangles[];
+};
+
+layout(std430, binding = 8) buffer VerticesBuffer
 {
     vec4 vertices[];
 };
-layout(std430, binding = 4) buffer IndiceBuffer
-{
-    ivec4 indices[];
-};
-layout(std430, binding = 5) buffer MeshBuffer
-{
-    MeshObject meshes[];
-};
-layout(std430, binding = 6) buffer NormalBuffer
+
+layout(std430, binding = 9) buffer NormalsBuffer
 {
     vec4 normals[];
+};
+
+layout(std430, binding = 10) buffer CoordsBuffer
+{
+    vec2 coords[];
 };
 
 struct Ray
@@ -89,38 +131,37 @@ RayHit CreateRayHit()
     return hit;
 };
 
-void IntersectGroundPlane(Ray ray, inout RayHit bestHit)
+vec3 minVec3(vec3 a, vec3 b)
 {
-//     Calculate distance along the ray where the ground plane is intersected
-    float t = -ray.origin.y / ray.direction.y;
-    if (t > 0 && t < bestHit.t)
-    {
-        bestHit.t = t;
-        bestHit.position = ray.origin + t * ray.direction;
-        bestHit.normal = vec4(0.0f, 1.0f, 0.0f, 0.0f);
-        bestHit.albedo = vec4(0.9f);
-        bestHit.specular = vec3(0.1f);
-    }
+    return vec3(min(a.x, b.x), min(a.y, b.y), min(a.z, b.z));
 }
 
-void IntersectSphere(Ray ray, inout RayHit bestHit, vec4 sphere, float radius)
+vec3 maxVec3(vec3 a, vec3 b)
 {
-    // Calculate distance along the ray where the sphere is intersected
-    vec4 d = ray.origin - sphere;
-    float p1 = -dot(ray.direction, d);
-    float p2sqr = p1 * p1 - dot(d, d) + radius * radius;
-    if (p2sqr < 0)
-        return;
-    float p2 = sqrt(p2sqr);
-    float t = p1 - p2 > 0.0f ? p1 - p2 : p1 + p2;
-    if (t > 0 && t < bestHit.t)
-    {
-        bestHit.t = t;
-        bestHit.position = ray.origin + t * ray.direction;
-        bestHit.normal = normalize(bestHit.position - sphere);
-        bestHit.albedo = vec4(0.5f);
-        bestHit.specular = vec3(0.3f);
-    }
+    return vec3(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z));
+}
+
+float min3(vec3 v)
+{
+    return min(min(v.x, v.y), v.z);
+}
+
+float max3(vec3 v)
+{
+    return max(max(v.x, v.y), v.z);
+}
+
+bool IntersectAABB(Ray ray, vec4 minBound, vec4 maxBound, out vec2 nearFar)
+{
+    vec3 invDir = 1.0f / ray.direction.xyz;
+    vec3 originMinBound = minBound.xyz - ray.origin.xyz;
+    vec3 originMaxBound = maxBound.xyz - ray.origin.xyz;
+    vec3 t0 = originMinBound * invDir;
+    vec3 t1 = originMaxBound * invDir;
+
+    nearFar = vec2(max3(minVec3(t0,t1)), min3(maxVec3(t0,t1)));
+
+    return nearFar.x <= nearFar.y && nearFar.y >= 0.0f;
 }
 
 const float EPSILON = 1e-8;
@@ -155,15 +196,25 @@ bool IntersectTriangle(Ray ray, vec3 vert0, vec3 vert1, vec3 vert2,
     return true;
 }
 
-struct Triangle {
+struct Triangle2 {
     vec3 v0;
     vec3 v1;
     vec3 v2;
 };
-bool IntersectTriangles(Ray ray, Triangle triangles[4],
-                        inout float tOut, inout float uOut,
-                        inout float vOut, inout int iOut)
+Triangle2 createDummyTriangle()
 {
+    Triangle2 t;
+    t.v0 = vec3(FLT_MAX);
+    t.v1 = vec3(FLT_MAX);
+    t.v2 = vec3(FLT_MAX);
+    return t;
+}
+
+bool IntersectTriangles(Ray ray, Triangle2 triangles[4],
+                        inout float t, inout float u,
+                        inout float v, inout int i)
+{
+    t = FLT_MAX;
     vec3 e11 = triangles[0].v1 - triangles[0].v0;
     vec3 e21 = triangles[0].v2 - triangles[0].v0;
     vec3 e12 = triangles[1].v1 - triangles[1].v0;
@@ -190,158 +241,331 @@ bool IntersectTriangles(Ray ray, Triangle triangles[4],
     vec4 pvecz = dir4x * e2y - dir4y * e2x;
     vec4 divisor = pvecx * e1x + pvecy * e1y + pvecz * e1z;
     vec4 invDivisor = vec4(1.0f, 1.0f, 1.0f, 1.0f) / divisor;
-    bvec4 backFace = lessThan(invDivisor, vec4(EPSILON));
     vec4 orig4x = ray.origin.xxxx;
     vec4 orig4y = ray.origin.yyyy;
     vec4 orig4z = ray.origin.zzzz;
     vec4 tvecx = orig4x - v0x;
     vec4 tvecy = orig4y - v0y;
     vec4 tvecz = orig4z - v0z;
-    vec4 u = tvecx * pvecx + tvecy * pvecy + tvecz * pvecz;
-    u *= invDivisor;
+    vec4 uInternal = tvecx * pvecx + tvecy * pvecy + tvecz * pvecz;
+    uInternal *= invDivisor;
     vec4 qvecx = tvecy * e1z - tvecz * e1y;
     vec4 qvecy = tvecz * e1x - tvecx * e1z;
     vec4 qvecz = tvecx * e1y - tvecy * e1x;
-    vec4 v = dir4x * qvecx + dir4y * qvecy + dir4z * qvecz;
-    v *= invDivisor;
-    vec4 t = e2x*qvecx + e2y*qvecy + e2z*qvecz;
-    t *= invDivisor;
-    tOut = FLT_MAX;
+    vec4 vInternal = dir4x * qvecx + dir4y * qvecy + dir4z * qvecz;
+    vInternal *= invDivisor;
+    vec4 tInternal = e2x*qvecx + e2y*qvecy + e2z*qvecz;
+    tInternal *= invDivisor;
+    
+    // uv conditions
+    bvec4 cond0 = greaterThanEqual(uInternal, vec4(0.0f));
+    bvec4 cond1 = greaterThanEqual(vInternal, vec4(0.0f));
+    bvec4 cond2 = lessThanEqual(uInternal + vInternal, vec4(1.0f));
+    // t > 0.0f
+    bvec4 cond3 = greaterThan(tInternal, vec4(0.0f));
+    // BackFace Culling (1 - on)
+    ivec4 cond4 = ivec4(greaterThanEqual(divisor, vec4(EPSILON))) | ivec4(1);
+    bvec4 finalCond = bvec4(ivec4(cond0) & ivec4(cond1) & ivec4(cond2) & ivec4(cond3) & cond4);
 
-    if(t.x > 0.0f && t.x < tOut)
+    if(finalCond.x && tInternal.x < t)
     {
-        if(u.x >= 0.0f && v.x >= 0.0f && u.x + v.x <= 1)
-        {
-            tOut = t.x;
-            uOut = u.x;
-            vOut = v.x;
-            iOut = 0;
-        }
+        t = tInternal.x;
+        u = uInternal.x;
+        v = vInternal.x;
+        i = 0;
     }
-    if(t.y > 0 && t.y < tOut)
+    
+    if(finalCond.y && tInternal.y < t)
     {
-        if(u.y >= 0.0f && v.y >= 0.0f && u.y + v.y <= 1)
-        {
-            tOut = t.y;
-            uOut = u.y;
-            vOut = v.y;
-            iOut = 1;
-        }
+        t = tInternal.y;
+        u = uInternal.x;
+        v = vInternal.x;
+        i = 1;
     }
-    if(t.z > 0 && t.z < tOut)
+    
+    if(finalCond.z && tInternal.z < t)
     {
-        if(u.z >= 0.0f && v.z >= 0.0f && u.z + v.z <= 1)
-        {
-            tOut = t.z;
-            uOut = u.z;
-            vOut = v.z;
-            iOut = 2;
-        }
+        t = tInternal.z;
+        u = uInternal.z;
+        v = vInternal.z;
+        i = 2;
     }
-    if(t.w > 0 && t.w < tOut)
+    
+    if(finalCond.w && tInternal.w < t)
     {
-        if(u.w >= 0.0f && v.w >= 0.0f && u.w + v.w <= 1)
-        {
-            tOut = t.w;
-            uOut = u.w;
-            vOut = v.w;
-            iOut = 3;
-        }
+        t = tInternal.w;
+        u = uInternal.w;
+        v = vInternal.w;
+        i = 3;
     }
 
-    return tOut != FLT_MAX;
-} 
-shared vec3 v0s[TRIANGLES];
-shared vec3 v1s[TRIANGLES];
-shared vec3 v2s[TRIANGLES];
-void IntersectMeshObject(Ray ray, inout RayHit bestHit, MeshObject meshObject)
+    return t != FLT_MAX;
+}
+
+// Node for storing state information during traversal.
+struct BVHTraversal {
+  int i; // Node
+  float mint;
+};
+
+BVHTraversal createBVHTraversal(int i, float mint)
 {
-    bool hasNormals = normals.length() != 0;
-    ivec2 storePos = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 size = imageSize(destTex);
-    bool inImageBounds = storePos.x < size.x && storePos.y < size.y;
-    int offset = meshObject.indices_offset;
-    int numOfIndices = meshObject.indices_count + offset;
-    int workSize = int(gl_WorkGroupSize.x * gl_WorkGroupSize.y);
-    mat4 transform = meshObject.localToWorldMatrix;
-    for (; offset < numOfIndices; offset += TRIANGLES) {
-        barrier();
-        int trianglesToLoad = min(numOfIndices - offset, TRIANGLES);
-        for (int i = int(gl_LocalInvocationIndex); i < trianglesToLoad; i += workSize) {
-            ivec3 actualIndex = indices[i + offset].xyz;
-            v0s[int(mod(i, TRIANGLES))] = (transform * vertices[actualIndex.x]).xyz;
-            v1s[int(mod(i, TRIANGLES))] = (transform * vertices[actualIndex.y]).xyz;
-            v2s[int(mod(i, TRIANGLES))] = (transform * vertices[actualIndex.z]).xyz;
-        }
-        barrier();
-        if (inImageBounds)
+    BVHTraversal ret;
+    ret.i = i;
+    ret.mint = mint;
+    return ret;
+}
+
+// - Compute the nearest intersection of all objects within the tree.
+// - Return true if hit was found, false otherwise.
+// - In the case where we want to find out of there is _ANY_ intersection at all,
+//   set occlusion == true, in which case we exit on the first hit, rather
+//   than find the closest.
+bool IntersectMesh(Mesh mesh, Ray ray, inout RayHit intersection, bool occlusion)
+{
+    vec2 bbhitsc0, bbhitsc1;
+    int closer, other;
+
+    // Working set
+    BVHTraversal todo[64];
+    int stackptr = 0;
+
+    // "Push" on the root node to the working set
+    todo[stackptr].i = mesh.bvhOffset;
+    todo[stackptr].mint = -FLT_MAX;
+    float tLast = intersection.t;
+
+    while(stackptr >= 0)
+    {
+        // Pop off the next node to work on.
+        int ni = todo[stackptr].i;
+        float near = todo[stackptr].mint;
+        stackptr--;
+        BVHNode node = meshBVHs[ni];
+
+        // If this node is further than the closest found intersection, continue
+        if(near > intersection.t)
+            continue;
+
+        // Is leaf -> Intersect
+        if (node.rightOffset == 0)
         {
-            for (int j = 0; j < trianglesToLoad; j++)
+            for(int o = 0; o < node.nPrims; ++o)
             {
-                vec3 v0 = v0s[j];
-                vec3 v1 = v1s[j];
-                vec3 v2 = v2s[j];
-                float t, u, v;
+                Primitive primitive = primitives[mesh.primitiveOffset + node.start + o];
+                Triangle triangle = triangles[primitive.index];
+                ivec3 vIndexes = triangle.vertices.xyz;
+                vec3 v0 = (mesh.objectToWorld * vertices[vIndexes.x]).xyz;
+                vec3 v1 = (mesh.objectToWorld * vertices[vIndexes.y]).xyz;
+                vec3 v2 = (mesh.objectToWorld * vertices[vIndexes.z]).xyz;
+                float t,u,v;
+
                 if (IntersectTriangle(ray, v0, v1, v2, t, u, v))
                 {
-                    if (t > 0 && t < bestHit.t)
+                    // If we're only looking for occlusion, then any hit is good enough
+                    if(occlusion)
+                        return true;
+                    // Otherwise, keep the closest intersection only
+                    if (t < intersection.t)
                     {
-                        bestHit.t = t;
-                        bestHit.position = ray.origin + t * ray.direction;
-                        if (hasNormals) {
-                            ivec3 normalIndices = indices[offset + j].xyz;
-                            bestHit.normal = (1 - u - v) * normals[normalIndices.x] + u * normals[normalIndices.y] + v * normals[normalIndices.z];
+                        intersection.t = t;
+                        if (mesh.smoothing)
+                        {
+                            ivec3 nIndices = triangle.normals.xyz;
+                            intersection.normal = (1 - u - v) * normals[nIndices.x] + u * normals[nIndices.y] + v * normals[nIndices.z];
                         }
                         else
-                            bestHit.normal = vec4(normalize(cross(v1 - v0, v2 - v0)), 0.0f);
-                        bestHit.albedo = vec4(0.5f);
-                        bestHit.specular = vec3(0.3f);
+                            intersection.normal = vec4(normalize(cross(v1 - v0, v2 - v0)), 0.0f);
+                        intersection.albedo = vec4(0.0, 0.95, 0.75, 1.0);
+                        intersection.specular = vec3(0.3f);
                     }
                 }
             }
-//            for (int j = 0; j < trianglesToLoad; j += 4)
-//            {
-//                Triangle triangles[4];
-//                triangles[0].v0 = v0s[j];
-//                triangles[0].v1 = v1s[j];
-//                triangles[0].v2 = v2s[j];
-//                triangles[1].v0 = v0s[j + 1];
-//                triangles[1].v1 = v1s[j + 1];
-//                triangles[1].v2 = v2s[j + 1];
-//                triangles[2].v0 = v0s[j + 2];
-//                triangles[2].v1 = v1s[j + 2];
-//                triangles[2].v2 = v2s[j + 2];
-//                triangles[3].v0 = v0s[j + 3];
-//                triangles[3].v1 = v1s[j + 3];
-//                triangles[3].v2 = v2s[j + 3];
-//                float t, u, v;
-//                int n;
-//                if (IntersectTriangles(ray, triangles, t, u, v, n))
-//                {
-//                    if (j + n < trianglesToLoad)
-//                    {
-//                        if (t > 0 && t < bestHit.t)
-//                        {
-//                            bestHit.t = t;
-//                            bestHit.position = ray.origin + t * ray.direction;
-//                            bestHit.normal = vec4(normalize(cross(triangles[n].v1 - triangles[n].v0, triangles[n].v2 - triangles[n].v0)), 0.0);
-//                            bestHit.albedo = vec4(0.5f);
-//                            bestHit.specular = vec3(0.3f);
-//                        }
-//                    }
-//                }
-//            }
         }
+        else
+        { // Not a leaf
+            BVHNode leftChild = meshBVHs[ni + 1];
+            BVHNode rightChild = meshBVHs[ni + node.rightOffset];
+
+            bool hitc0 = IntersectAABB(ray, leftChild.minBound, leftChild.maxBound, bbhitsc0);
+            bool hitc1 = IntersectAABB(ray, rightChild.minBound, rightChild.maxBound, bbhitsc1);
+
+            // Did we hit both nodes?
+            if(hitc0 && hitc1)
+            {
+                // We assume that the left child is a closer hit...
+                closer = ni+1;
+                other = ni + int(node.rightOffset);
+
+                // ... If the right child was actually closer, swap the relavent values.
+                if(bbhitsc1.x < bbhitsc0.x)
+                {
+                    float ftmp = bbhitsc0.x;
+                    bbhitsc0.x = bbhitsc1.x;
+                    bbhitsc1.x = ftmp;
+
+                    ftmp = bbhitsc0.y;
+                    bbhitsc0.y = bbhitsc1.y;
+                    bbhitsc1.y = ftmp;
+
+                    int itmp = closer;
+                    closer = other;
+                    other = itmp;
+                }
+
+                // It's possible that the nearest object is still in the other side, but we'll
+                // check the further-awar node later...
+
+                // Push the farther first
+                todo[++stackptr] = createBVHTraversal(other, bbhitsc1.x);
+
+                // And now the closer (with overlap test)
+                todo[++stackptr] = createBVHTraversal(closer, bbhitsc0.x);
+            }
+            else if (hitc0)
+                todo[++stackptr] = createBVHTraversal(ni + 1, bbhitsc0.x);
+            else if(hitc1)
+                todo[++stackptr] = createBVHTraversal(ni + int(node.rightOffset), bbhitsc1.x);
+
+        }
+    }
+    return intersection.t < tLast;
+}
+
+// - Compute the nearest intersection of all objects within the tree.
+// - Return true if hit was found, false otherwise.
+// - In the case where we want to find out of there is _ANY_ intersection at all,
+//   set occlusion == true, in which case we exit on the first hit, rather
+//   than find the closest.
+bool IntersectScene(Ray ray, inout RayHit intersection, bool occlusion)
+{
+    vec2 bbhitsc0, bbhitsc1;
+    int closer, other;
+
+    // Working set
+    BVHTraversal todo[64];
+    int stackptr = 0;
+
+    // "Push" on the root node to the working set
+    todo[stackptr].i = 0;
+    todo[stackptr].mint = -FLT_MAX;
+    float tLast = intersection.t;
+
+    while(stackptr >= 0)
+    {
+        // Pop off the next node to work on.
+        int ni = todo[stackptr].i;
+        float near = todo[stackptr].mint;
+        stackptr--;
+        BVHNode node = sceneBVH[ni];
+
+        // If this node is further than the closest found intersection, continue
+        if(near > intersection.t)
+            continue;
+
+        // Is leaf -> Intersect
+        if (node.rightOffset == 0)
+        {
+            Mesh mesh = meshes[node.start];
+            for(int o = 0; o < node.nPrims; ++o)
+            {
+                Mesh mesh = meshes[node.start];
+
+                if (IntersectMesh(mesh, ray, intersection, occlusion))
+                {
+                    // If we're only looking for occlusion, then any hit is good enough
+                    if(occlusion)
+                        return true;
+                }
+            }
+        }
+        else
+        { // Not a leaf
+            BVHNode leftChild = sceneBVH[ni + 1];
+            BVHNode rightChild = sceneBVH[ni + node.rightOffset];
+
+            bool hitc0 = IntersectAABB(ray, leftChild.minBound, leftChild.maxBound, bbhitsc0);
+            bool hitc1 = IntersectAABB(ray, rightChild.minBound, rightChild.maxBound, bbhitsc1);
+
+            // Did we hit both nodes?
+            if(hitc0 && hitc1)
+            {
+                // We assume that the left child is a closer hit...
+                closer = ni+1;
+                other = ni + int(node.rightOffset);
+
+                // ... If the right child was actually closer, swap the relavent values.
+                if(bbhitsc1.x < bbhitsc0.x)
+                {
+                    float ftmp = bbhitsc0.x;
+                    bbhitsc0.x = bbhitsc1.x;
+                    bbhitsc1.x = ftmp;
+
+                    ftmp = bbhitsc0.y;
+                    bbhitsc0.y = bbhitsc1.y;
+                    bbhitsc1.y = ftmp;
+
+                    int itmp = closer;
+                    closer = other;
+                    other = itmp;
+                }
+
+                // It's possible that the nearest object is still in the other side, but we'll
+                // check the further-awar node later...
+
+                // Push the farther first
+                todo[++stackptr] = createBVHTraversal(other, bbhitsc1.x);
+
+                // And now the closer (with overlap test)
+                todo[++stackptr] = createBVHTraversal(closer, bbhitsc0.x);
+            }
+            else if (hitc0)
+                todo[++stackptr] = createBVHTraversal(ni + 1, bbhitsc0.x);
+            else if(hitc1)
+                todo[++stackptr] = createBVHTraversal(ni + int(node.rightOffset), bbhitsc1.x);
+
+        }
+    }
+
+//    // If we hit something,
+    if(intersection.t < tLast)
+        intersection.position = ray.origin + ray.direction * intersection.t;
+
+    return intersection.t < tLast;
+}
+
+void IntersectGroundPlane(Ray ray, inout RayHit bestHit)
+{
+//     Calculate distance along the ray where the ground plane is intersected
+    float t = -ray.origin.y / ray.direction.y;
+    if (t > 0 && t < bestHit.t)
+    {
+        bestHit.t = t;
+        bestHit.position = ray.origin + t * ray.direction;
+        bestHit.normal = vec4(0.0f, 1.0f, 0.0f, 0.0f);
+        bestHit.albedo = vec4(0.9f);
+        bestHit.specular = vec3(0.1f);
     }
 }
 
-RayHit Trace(Ray ray)
+void IntersectSphere(Ray ray, inout RayHit bestHit, vec4 sphere, float radius)
 {
-    RayHit bestHit = CreateRayHit();
-    IntersectGroundPlane(ray, bestHit);
-    for (int i = 0; i < meshes.length(); i++)
-        IntersectMeshObject(ray, bestHit, meshes[i]);
-    return bestHit;
+    // Calculate distance along the ray where the sphere is intersected
+    vec4 d = ray.origin - sphere;
+    float p1 = -dot(ray.direction, d);
+    float p2sqr = p1 * p1 - dot(d, d) + radius * radius;
+    if (p2sqr < 0)
+        return;
+    float p2 = sqrt(p2sqr);
+    float t = p1 - p2 > 0.0f ? p1 - p2 : p1 + p2;
+    if (t > 0 && t < bestHit.t)
+    {
+        bestHit.t = t;
+        bestHit.position = ray.origin + t * ray.direction;
+        bestHit.normal = normalize(bestHit.position - sphere);
+        bestHit.albedo = vec4(0.5f);
+        bestHit.specular = vec3(0.3f);
+    }
 }
 
 float localSeed = 0.0;
@@ -353,34 +577,85 @@ float rand(vec2 seed)
     return result;
 }
 
+RayHit Trace(Ray ray, bool occlusion)
+{
+    RayHit bestHit = CreateRayHit();
+    IntersectScene(ray, bestHit, occlusion);
+    return bestHit;
+}
+
+vec3 correctGamma(vec3 color, float gamma)
+{
+    vec3 mapped = color / (color + vec3(1.0));
+    return pow(mapped, vec3(1.0 / gamma));
+}
+
 const float PI = 3.14159265f;
 const float invPI = 1.0f / PI;
+const float GAMMA = 2.2;
+vec3 sampleEnviroment(vec3 direction, float lod)
+{
+        float theta = acos(-direction.y) * -invPI;
+        float phi = atan(direction.x, -direction.z) * -invPI * 0.5f;
+        vec3 image = textureLod(hdriTexture, vec2(phi, theta), lod).xyz;
+        return correctGamma(image, GAMMA);
+}
+
+vec3 pick_random_point_in_sphere(){
+  float x0,x1,x2,x3,d2;
+  do{
+    x0=rand(2 * ivec2(gl_GlobalInvocationID.xy) - 1);
+    x1=rand(2 * ivec2(gl_GlobalInvocationID.xy) - 1);
+    x2=rand(2 * ivec2(gl_GlobalInvocationID.xy) - 1);
+    x3=rand(2 * ivec2(gl_GlobalInvocationID.xy) - 1);
+    d2=x0*x0+x1*x1+x2*x2+x3*x3;
+  } while(d2>1.0f);
+  float scale = 1.0f / d2;
+  return vec3(2*(x1*x3+x0*x2)*scale,
+                  2*(x2*x3+x0*x1)*scale,
+                  (x0*x0+x3*x3-x1*x1-x2*x2)*scale);
+}
+
+vec3 pick_random_point_in_semisphere(vec3 v){
+  vec3 result=pick_random_point_in_sphere();
+  if(dot(v, result)<0){
+    result.x=-result.x;
+    result.y=-result.y;
+    result.z=-result.z;
+  }
+  return normalize(result);
+}
+
+
 vec3 Shade(inout Ray ray, RayHit hit)
 {
     if (hit.t < FLT_MAX)
     {
-        vec4 directionalLight = vec4(-2.0, 5.0, 10.0, 1.0);
         // Reflect the ray and multiply energy with specular reflection
         ray.origin = hit.position + hit.normal * 0.001f;
         ray.direction = reflect(ray.direction, hit.normal);
-        vec3 lightPosition = vec3(2 * rand(ivec2(gl_GlobalInvocationID.xy)) + directionalLight.x, 2 * rand(ivec2(gl_GlobalInvocationID.xy)) + directionalLight.y, directionalLight.z);
-        vec3 rayDirection = normalize(lightPosition - ray.origin.xyz);
+
+//        vec4 directionalLight = vec4(-2.0, 5.0, 10.0, 1.0);
+//        vec3 lightPosition = vec3(2 * rand(ivec2(gl_GlobalInvocationID.xy)) + directionalLight.x, 2 * rand(ivec2(gl_GlobalInvocationID.xy)) + directionalLight.y, directionalLight.z);
+//        vec3 shadowRayDirection = normalize(lightPosition - ray.origin.xyz);
+        vec3 lightDirection = pick_random_point_in_semisphere(hit.normal.xyz);
+        vec3 shadowRayDirection = lightDirection;
+
         // Return nothing// Shadow test ray
-        bool shadow = false;
-        Ray shadowRay = CreateRay(hit.position + hit.normal * 0.001f, vec4(rayDirection, 0.0));
-        RayHit shadowHit = Trace(shadowRay);
-        if (shadowHit.t != FLT_MAX)
-        {
-            return vec3(0.0f);
-        }
-        return clamp(dot(hit.normal.xyz, rayDirection), 0.0, 1.0) * directionalLight.w * hit.albedo.xyz;
+//        Ray shadowRay = CreateRay(hit.position + hit.normal * 0.001f, vec4(shadowRayDirection, 0.0));
+//        RayHit shadowHit = Trace(shadowRay, true);
+//        if (shadowHit.t != FLT_MAX)
+//        {
+//            return vec3(0.0f);
+//        }
+//        return hit.albedo.xyz;
+        vec3 lightColor = sampleEnviroment(lightDirection, 2.0);
+        return clamp(dot(hit.normal.xyz, shadowRayDirection), 0.0, 1.0) * lightColor * hit.albedo.xyz;
+//        return clamp(dot(hit.normal.xyz, shadowRayDirection), 0.0, 1.0) * directionalLight.w * hit.albedo.xyz;
     }
     else
     {
-        float theta = acos(-ray.direction.y) * -invPI;
-        float phi = atan(ray.direction.x, -ray.direction.z) * -invPI * 0.5f;
-        vec3 image = texture(hdriTexture, vec2(phi, theta)).xyz;
-        return sqrt(image);
+        return sampleEnviroment(ray.direction.xyz, 0.0);
     }
 }
 
@@ -392,12 +667,15 @@ void main()
     bool inImageBounds = storePos.x < size.x && storePos.y < size.y;
     
     vec4 result = imageLoad(destTex, storePos) * colorMultiplier;
+//    if (result.w == 50.0)
+//        result = (result / result.w) * 15;
     Ray ray = CreateCameraRay(vec2(storePos) + vec2(rand(vec2(storePos)), rand(vec2(storePos))), size);
 
-    for (int i = 0; i < 2; i++)
+    for (int i = 0; i < 1; i++)
     {
-        RayHit hit = Trace(ray);
-        result += ray.energy * vec4(Shade(ray, hit), 0.0f);//           
+        RayHit hit = Trace(ray, false);
+//        result += ray.energy * vec4(correctGamma(Shade(ray, hit), GAMMA), 0.0f);
+        result += ray.energy * vec4(Shade(ray, hit), 0.0f);
         if (hit.t == FLT_MAX || all(equal(ray.energy, vec4(0.0f))))
         {
             break;

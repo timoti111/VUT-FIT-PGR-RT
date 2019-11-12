@@ -27,5 +27,6 @@ private:
     bool drawGuiB = true;
     bool resetTexture = false;
     Camera camera;
+    Scene scene;
     HDRLoaderResult backgroundTexture;
 };
