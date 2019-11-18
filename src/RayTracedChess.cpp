@@ -41,8 +41,14 @@ RayTracedChess::RayTracedChess() : Application()
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     auto ident = glm::mat4x4(1.0f);
+    double actTime = glfwGetTime();
     scene.shapeFromObj("res/models/bunny/bunny.obj", "Bunny");
-    scene.instantiateShape("Bunny", ident);
+    double time = glfwGetTime() - actTime;
+    std::cout << "Model load time: " << time << std::endl;
+    actTime = glfwGetTime();
+    scene.instantiateShape("Bunny", ident, true);
+    time = glfwGetTime() - actTime;
+    std::cout << "BVH build time: " << time << std::endl;
     scene.updateBVHs();
 
     vars.add<ge::gl::Buffer>("sceneBVHBuffer", scene.getFlatTree(), GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 3);

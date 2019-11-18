@@ -12,8 +12,6 @@ Application::Application()
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    const char* glsl_version = "#version 130";
 
     window = glfwCreateWindow(width, height, "RayTracedChess", NULL, NULL);
     if (window == nullptr)
@@ -34,7 +32,7 @@ Application::Application()
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init(glsl_version);
+    ImGui_ImplOpenGL3_Init("#version 460");
 
     io.Fonts->AddFontFromFileTTF("res/fonts/Roboto-Medium.ttf", 16.0f);
 

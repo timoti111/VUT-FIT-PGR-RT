@@ -31,9 +31,9 @@ void Scene::shapeFromObj(std::string path, std::string name)
         shapeI.shapeParts.push_back(Scene::ShapePart{ shape.name, (int)primitives.size(), (int)shape.mesh.indices.size() / 3 });
         for (size_t i = 0; i < shape.mesh.indices.size(); i += 3)
         {
-            auto t = TrianglePrimitive(this->triangles.size());
+            auto t = Geometry::Triangle(this->triangles.size());
             primitives.push_back(t);
-            triangles.push_back(Scene::Triangle{
+            triangles.push_back(Geometry::GPU::Triangle{
                 glm::ivec4(glm::ivec3(shape.mesh.indices[i].vertex_index, shape.mesh.indices[i + 1].vertex_index, shape.mesh.indices[i + 2].vertex_index) + (int)this->vertices.size(), 0),
                 glm::ivec4(glm::ivec3(shape.mesh.indices[i].normal_index, shape.mesh.indices[i + 1].normal_index, shape.mesh.indices[i + 2].normal_index) + (int)this->normals.size(), 0),
                 glm::ivec4(glm::ivec3(shape.mesh.indices[i].texcoord_index, shape.mesh.indices[i + 1].texcoord_index, shape.mesh.indices[i + 2].texcoord_index) + (int)this->coords.size(), 0)
@@ -60,21 +60,39 @@ void Scene::shapeFromObj(std::string path, std::string name)
     }
 }
 
-void Scene::instantiateShape(std::string shapeName, glm::mat4x4 objectToWorld)
+void Scene::instantiateShape(std::string shapeName, glm::mat4x4 objectToWorld, bool asOneMesh)
 {
+    int primitiveCount = 0;
     for (auto& shape : shapes)
     {
         if (shape.name == shapeName)
         {
-            for (auto& shapePart : shape.shapeParts)
+            if (asOneMesh)
             {
-                Mesh mesh = Mesh(
+                for (auto& shapePart : shape.shapeParts)
+                {
+                    primitiveCount += shapePart.primitiveCount;
+                }
+                Geometry::Mesh mesh = Geometry::Mesh(
                     *this,
-                    shapePart.name,
-                    shapePart.primitiveOffset,
-                    shapePart.primitiveCount,
+                    shape.name,
+                    shape.shapeParts.front().primitiveOffset,
+                    primitiveCount,
                     objectToWorld);
                 meshes.push_back(mesh);
+            }
+            else
+            {
+                for (auto& shapePart : shape.shapeParts)
+                {
+                    Geometry::Mesh mesh = Geometry::Mesh(
+                        *this,
+                        shapePart.name,
+                        shapePart.primitiveOffset,
+                        shapePart.primitiveCount,
+                        objectToWorld);
+                    meshes.push_back(mesh);
+                }
             }
             break;
         }
@@ -83,7 +101,7 @@ void Scene::instantiateShape(std::string shapeName, glm::mat4x4 objectToWorld)
 
 void Scene::removeMesh(std::string meshName)
 {
-    Mesh* foundMesh = nullptr;
+    Geometry::Mesh* foundMesh = nullptr;
     for (auto& mesh : meshes)
     {
         if (mesh.name == meshName)
@@ -118,115 +136,16 @@ void Scene::updateBVHs()
         auto& meshBVH = mesh.getFlatTree();
         meshBVHs.insert(meshBVHs.end(), meshBVH.begin(), meshBVH.end());
         for (auto& treePrims : mesh.getPrimitives())
-            primitivesGPU.push_back(*dynamic_cast<GeomPrimitive*>(treePrims));
+            primitivesGPU.push_back(*dynamic_cast<Geometry::Primitive*>(treePrims));
     }
     update(*this);
 
     meshesGPU.clear();
     for (auto& treePrimitive : getPrimitives())
-        meshesGPU.push_back(*dynamic_cast<Mesh*>(treePrimitive));
+        meshesGPU.push_back(*dynamic_cast<Geometry::Mesh*>(treePrimitive));
 
     sceneUpdatedCallback();
 }
 
 void Scene::sceneUpdatedCallback()
-{}
-
-Scene::GeomPrimitive::GeomPrimitive(GLint type, GLint index)
-    : TreeObject(), type(type), index(index)
-{}
-
-AABB Scene::GeomPrimitive::getAABB(Scene& scene, glm::mat4x4& objectToWorld)
-{
-    AABB ret;
-    switch (type)
-    {
-        case TRIANGLE:
-            Triangle triangle = scene.triangles[index];
-            ret.expandToInclude(glm::vec3(objectToWorld * scene.vertices[triangle.vertices.x]));
-            ret.expandToInclude(glm::vec3(objectToWorld * scene.vertices[triangle.vertices.y]));
-            ret.expandToInclude(glm::vec3(objectToWorld * scene.vertices[triangle.vertices.z]));
-            break;
-        default:
-            break;
-    }
-    return ret;
-}
-
-glm::vec3 Scene::GeomPrimitive::getCentroid(Scene& scene, glm::mat4x4& objectToWorld)
-{
-    glm::vec3 ret;
-    switch (type)
-    {
-        case TRIANGLE:
-            Triangle triangle = scene.triangles[index];
-            ret = glm::vec3(objectToWorld * scene.vertices[triangle.vertices.x]);
-            ret += glm::vec3(objectToWorld * scene.vertices[triangle.vertices.y]);
-            ret += glm::vec3(objectToWorld * scene.vertices[triangle.vertices.z]);
-            break;
-        default:
-            break;
-    }
-    return ret / 3.0f;
-}
-
-Scene::TrianglePrimitive::TrianglePrimitive(int index)
-    : GeomPrimitive(TRIANGLE, index)
-{}
-
-Scene::Mesh::Mesh(Scene& scene, std::string name, int primitiveOffset, int primitiveCount, glm::mat4x4 objectToWorld) :
-    GeomPrimitive(MESH, -1),
-    BVH(1),
-    scene(&scene),
-    name(name),
-    objectToWorld(objectToWorld)
-{
-    for (int i = primitiveOffset; i < primitiveOffset + primitiveCount; i++)
-        addPrimitive(&this->scene->primitives[i]);
-    updateBVHs();
-}
-
-AABB Scene::Mesh::getAABB(Scene& scene, glm::mat4x4& objectToWorld)
-{
-    return AABB(getFlatTree()[0].min, getFlatTree()[0].max);
-}
-
-glm::vec3 Scene::Mesh::getCentroid(Scene& scene, glm::mat4x4& objectToWorld)
-{
-    AABB own = getAABB(scene, objectToWorld);
-    return glm::vec3(
-        own.min.x + own.extent.x * 0.5f,
-        own.min.y + own.extent.y * 0.5f,
-        own.min.z + own.extent.z * 0.5f
-    );
-}
-
-void Scene::Mesh::setObjectToWorld(glm::mat4x4& objectToWorld)
-{
-    this->objectToWorld = objectToWorld;
-    updateBVHs();
-}
-
-glm::mat4x4 Scene::Mesh::getObjectToWorld()
-{
-    return objectToWorld;
-}
-
-void Scene::Mesh::updateBVHs()
-{
-    update(*this->scene, objectToWorld);
-    scene->setUpdateSceneBVH();
-}
-
-Scene::GeomPrimitiveGPU::GeomPrimitiveGPU(GeomPrimitive p) :
-    type(p.type),
-    index(p.index)
-{}
-
-Scene::MeshGPU::MeshGPU(Mesh& o) :
-    objectToWorld(o.objectToWorld),
-    primitiveOffset(o.gpuPrimitiveOffset),
-    bvhOffset(o.bvhOffset),
-    smoothing(false),
-    materialID(0)
 {}
