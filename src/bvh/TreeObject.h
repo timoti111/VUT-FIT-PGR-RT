@@ -3,6 +3,7 @@
 #include <glm/mat4x4.hpp>
 
 class Scene;
+class Ray;
 
 struct TreeObject
 {

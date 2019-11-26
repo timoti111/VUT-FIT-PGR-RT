@@ -2,8 +2,8 @@
 #include "Application.h"
 #include "Vars/Vars.h"
 #include <string>
-#include "RayTracing/Camera.h"
-#include "RayTracing/Scene.h"
+#include "Scene/Camera.h"
+#include "Scene/Scene.h"
 #include "Utils/hdrloader.h"
 
 class RayTracedChess : public Application {
@@ -16,6 +16,7 @@ public:
     void mouseMoveEvent(double xpos, double ypos) override;
     void keyEvent(int key, int scancode, int action, int mods) override;
     void resizeEvent(int width, int height) override;
+    void updateBuffers();
 
 private:
     vars::Vars vars;

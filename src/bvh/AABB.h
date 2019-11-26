@@ -15,5 +15,4 @@ struct AABB
     void expandToInclude(const AABB& b);
     uint32_t maxDimension() const;
     float surfaceArea() const;
-private:
 };

@@ -1,16 +1,6 @@
 #include "AABB.h"
 #include <algorithm>
 
-glm::vec3 minVec3(glm::vec3 a, glm::vec3 b)
-{
-    return glm::vec3(std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z));
-}
-
-glm::vec3 maxVec3(glm::vec3 a, glm::vec3 b)
-{
-    return glm::vec3(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z));
-}
-
 AABB::AABB() :
     min(glm::vec3(std::numeric_limits<float>::max())),
     max(glm::vec3(-std::numeric_limits<float>::max()))
@@ -30,17 +20,27 @@ AABB::AABB(const glm::vec3& p)
     extent = max - min;
 }
 
+glm::vec3 minVec3a(glm::vec3 a, glm::vec3 b)
+{
+    return glm::vec3(std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z));
+}
+
+glm::vec3 maxVec3a(glm::vec3 a, glm::vec3 b)
+{
+    return glm::vec3(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z));
+}
+
 void AABB::expandToInclude(const glm::vec3& p)
 {
-    min = minVec3(min, p);
-    max = maxVec3(max, p);
+    min = minVec3a(min, p);
+    max = maxVec3a(max, p);
     extent = max - min;
 }
 
 void AABB::expandToInclude(const AABB& b)
 {
-    min = minVec3(min, b.min);
-    max = maxVec3(max, b.max);
+    min = minVec3a(min, b.min);
+    max = maxVec3a(max, b.max);
     extent = max - min;
 }
 

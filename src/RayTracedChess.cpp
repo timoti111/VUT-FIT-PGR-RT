@@ -9,6 +9,9 @@
 #include "imgui.h"
 #include "bvh/BVH.h"
 #include <glm/gtc/matrix_transform.hpp>
+#include "RayTracing/Ray.h"
+//#include "Chess/Chess.h"
+//#include "Scene/Geometry/Shape.h"
 
 RayTracedChess::RayTracedChess() : Application()
 {
@@ -42,23 +45,17 @@ RayTracedChess::RayTracedChess() : Application()
 
     auto ident = glm::mat4x4(1.0f);
     double actTime = glfwGetTime();
-    scene.shapeFromObj("res/models/bunny/bunny.obj", "Bunny");
+    scene.shapeFromObj("res/models/chess/set1/Knight.obj", "Knight");
+    scene.shapeFromObj("res/models/chess/board1/Board.obj", "Board");
     double time = glfwGetTime() - actTime;
     std::cout << "Model load time: " << time << std::endl;
     actTime = glfwGetTime();
-    scene.instantiateShape("Bunny", ident, true);
+    scene.instantiateShape("Board", ident, false);
     time = glfwGetTime() - actTime;
     std::cout << "BVH build time: " << time << std::endl;
+    scene.instantiateShape("Knight", glm::translate(ident, glm::vec3(-3.514, 0.80321, -3.514)), false);
     scene.updateBVHs();
-
-    vars.add<ge::gl::Buffer>("sceneBVHBuffer", scene.getFlatTree(), GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 3);
-    vars.add<ge::gl::Buffer>("meshBHVs", scene.meshBVHs, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 4);
-    vars.add<ge::gl::Buffer>("meshesBuffer", scene.meshesGPU, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 5);
-    vars.add<ge::gl::Buffer>("primitivesBuffer", scene.primitivesGPU, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 6);
-    vars.add<ge::gl::Buffer>("trianglesBuffer", scene.triangles, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 7);
-    vars.add<ge::gl::Buffer>("verticesBuffer", scene.vertices, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 8);
-    vars.add<ge::gl::Buffer>("normalsBuffer", scene.normals, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 9);
-    vars.add<ge::gl::Buffer>("coordsBuffer", scene.coords, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 10);
+    updateBuffers();
 }
 
 void RayTracedChess::initComputeShaderImage()
@@ -100,7 +97,20 @@ void RayTracedChess::draw()
 }
 
 void RayTracedChess::mouseButtonEvent(int button, int action, int mods)
-{}
+{
+    if (action == GLFW_RELEASE)
+    {
+        double xpos, ypos;
+        glfwGetCursorPos(window, &xpos, &ypos);
+        double actTime = glfwGetTime();
+        Ray ray = Ray::createCameraRay(&camera, glm::vec2(xpos, height - ypos), glm::ivec2(width, height));
+        int ret = ray.traceRay(&scene, false);
+        ret = ret == -1 ? ret : scene.meshesGPU[ret].getOriginalIndex(scene);
+        scene.selectMesh(ret);
+        resetTexture = true;
+        updateBuffers();
+    }
+}
 
 void RayTracedChess::mouseScrollEvent(double xoffset, double yoffset)
 {
@@ -177,6 +187,59 @@ void RayTracedChess::keyEvent(int key, int scancode, int action, int mods)
 void RayTracedChess::resizeEvent(int x, int y)
 {
     initComputeShaderImage();
+}
+
+void RayTracedChess::updateBuffers()
+{
+    vars.reCreate<ge::gl::Buffer>("sceneBVHBuffer", scene.getFlatTree(), GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 3);
+    vars.reCreate<ge::gl::Buffer>("meshBHVs", scene.meshBVHs, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 4);
+    vars.reCreate<ge::gl::Buffer>("meshesBuffer", scene.meshesGPU, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 5);
+    vars.reCreate<ge::gl::Buffer>("primitivesBuffer", scene.primitivesGPU, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 6);
+    vars.reCreate<ge::gl::Buffer>("trianglesBuffer", scene.triangles, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 7);
+    vars.reCreate<ge::gl::Buffer>("verticesBuffer", scene.vertices, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 8);
+    vars.reCreate<ge::gl::Buffer>("normalsBuffer", scene.normals, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 9);
+    vars.reCreate<ge::gl::Buffer>("coordsBuffer", scene.coords, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 10);
+    vars.reCreate<ge::gl::Buffer>("spheresBuffer", scene.spheres, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 11);
+    vars.reCreate<ge::gl::Buffer>("cylindersBuffer", scene.cylinders, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 12);
+    //auto sceneBVHBuffer = vars.get<ge::gl::Buffer>("sceneBVHBuffer");
+    //sceneBVHBuffer->realloc(scene.getFlatTree().size() * sizeof(BVHFlatNode), ge::gl::Buffer::KEEP_ID);
+    //sceneBVHBuffer->setData(scene.getFlatTree().data(), scene.getFlatTree().size() * sizeof(BVHFlatNode), 0);
+
+    //auto meshBHVs = vars.get<ge::gl::Buffer>("meshBHVs");
+    //meshBHVs->realloc(scene.meshBVHs.size() * sizeof(BVHFlatNode), ge::gl::Buffer::KEEP_ID);
+    //meshBHVs->setData(scene.meshBVHs.data(), scene.meshBVHs.size() * sizeof(BVHFlatNode), 0);
+
+    //auto meshesBuffer = vars.get<ge::gl::Buffer>("meshesBuffer");
+    //meshesBuffer->realloc(scene.meshesGPU.size() * sizeof(Geometry::GPU::Mesh), ge::gl::Buffer::KEEP_ID);
+    //meshesBuffer->setData(scene.meshBVHs.data(), scene.meshBVHs.size() * sizeof(Geometry::GPU::Mesh), 0);
+
+    //auto primitivesBuffer = vars.get<ge::gl::Buffer>("primitivesBuffer");
+    //primitivesBuffer->realloc(scene.primitivesGPU.size() * sizeof(Geometry::GPU::Primitive), ge::gl::Buffer::KEEP_ID);
+    //primitivesBuffer->setData(scene.primitivesGPU.data(), scene.primitivesGPU.size() * sizeof(Geometry::GPU::Primitive), 0);
+
+    //auto trianglesBuffer = vars.get<ge::gl::Buffer>("trianglesBuffer");
+    //trianglesBuffer->realloc(scene.triangles.size() * sizeof(Geometry::GPU::Triangle), ge::gl::Buffer::KEEP_ID);
+    //trianglesBuffer->setData(scene.triangles.data(), scene.triangles.size() * sizeof(Geometry::GPU::Triangle), 0);
+
+    //auto verticesBuffer = vars.get<ge::gl::Buffer>("verticesBuffer");
+    //verticesBuffer->realloc(scene.vertices.size() * sizeof(glm::vec4), ge::gl::Buffer::KEEP_ID);
+    //verticesBuffer->setData(scene.vertices.data(), scene.vertices.size() * sizeof(glm::vec4), 0);
+
+    //auto normalsBuffer = vars.get<ge::gl::Buffer>("normalsBuffer");
+    //normalsBuffer->realloc(scene.normals.size() * sizeof(glm::vec4), ge::gl::Buffer::KEEP_ID);
+    //normalsBuffer->setData(scene.normals.data(), scene.normals.size() * sizeof(glm::vec4), 0);
+
+    //auto coordsBuffer = vars.get<ge::gl::Buffer>("coordsBuffer");
+    //coordsBuffer->realloc(scene.coords.size() * sizeof(glm::vec2), ge::gl::Buffer::KEEP_ID);
+    //coordsBuffer->setData(scene.coords.data(), scene.coords.size() * sizeof(glm::vec2), 0);
+
+    //auto spheresBuffer = vars.get<ge::gl::Buffer>("spheresBuffer");
+    //spheresBuffer->realloc(scene.spheres.size() * sizeof(Geometry::GPU::Sphere), ge::gl::Buffer::KEEP_ID);
+    //spheresBuffer->setData(scene.spheres.data(), scene.spheres.size() * sizeof(Geometry::GPU::Sphere), 0);
+
+    //auto cylindersBuffer = vars.get<ge::gl::Buffer>("cylindersBuffer");
+    //cylindersBuffer->realloc(scene.cylinders.size() * sizeof(Geometry::GPU::Cylinder), ge::gl::Buffer::KEEP_ID);
+    //cylindersBuffer->setData(scene.cylinders.data(), scene.cylinders.size() * sizeof(Geometry::GPU::Cylinder), 0);
 }
 
 void RayTracedChess::drawGui(bool drawGui)

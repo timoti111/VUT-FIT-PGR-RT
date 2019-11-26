@@ -83,6 +83,26 @@ layout(std430, binding = 10) buffer CoordsBuffer
     vec2 coords[];
 };
 
+struct Sphere
+{
+    vec4 sphere;
+};
+layout(std430, binding = 11) buffer SpheresBuffer
+{
+    Sphere spheres[];
+};
+
+struct Cylinder
+{
+    vec4 begin;
+    vec4 end;
+    float radius;
+};
+layout(std430, binding = 12) buffer CylindersBuffer
+{
+    Cylinder cylinders[];
+};
+
 struct Ray
 {
     vec4 origin;
@@ -184,8 +204,6 @@ bool IntersectSphere(Ray ray, vec4 sphere, inout RayHit bestHit)
         bestHit.t = t0;
         bestHit.position = ray.origin + t0 * ray.direction;
         bestHit.normal = normalize(bestHit.position - vec4(sphere.xyz, 1.0f));
-        bestHit.albedo = vec4(1.0f);
-        bestHit.specular = vec3(0.3f);
         return true;
     }
     return false;
@@ -542,8 +560,28 @@ bool IntersectPrimitive(Ray ray, Primitive primitive, Mesh mesh, bool occlusion,
             }
             break;
         case SPHERE:
+            Sphere sphere = spheres[primitive.index];
+            if (IntersectSphere(ray, sphere.sphere, intersection))
+            {
+                // If we're only looking for occlusion, then any hit is good enough
+                if(occlusion)
+                    return true;
+                intersection.albedo = vec4(1.0f);
+                intersection.specular = vec3(0.3f);
+                return true;
+            }
             break;
         case CYLINDER:
+            Cylinder cylinder = cylinders[primitive.index];
+            if (IntersectCylinder(ray, intersection, cylinder.begin.xyz, cylinder.end.xyz, cylinder.radius))
+            {
+                // If we're only looking for occlusion, then any hit is good enough
+                if(occlusion)
+                    return true;
+                intersection.albedo = vec4(1.0f);
+                intersection.specular = vec3(0.3f);
+                return true;
+            }
             break;
         default:
             break;
@@ -676,10 +714,9 @@ bool IntersectScene(Ray ray, inout RayHit intersection, bool occlusion)
         // Is leaf -> Intersect
         if (node.rightOffset == 0)
         {
-            Mesh mesh = meshes[node.start];
             for(int o = 0; o < node.nPrims; ++o)
             {
-                Mesh mesh = meshes[node.start];
+                Mesh mesh = meshes[node.start + o];
 
                 if (IntersectMesh(mesh, ray, intersection, occlusion) && occlusion)
                     return true;
@@ -752,7 +789,7 @@ float rand(vec2 seed)
 RayHit Trace(Ray ray, bool occlusion)
 {
     RayHit hit = CreateRayHit();
-    IntersectSelectedObject(ray, hit, sceneBVH[0].minBound, sceneBVH[0].maxBound, 0.01f);
+//    IntersectSelectedObject(ray, hit, sceneBVH[0].minBound, sceneBVH[0].maxBound, 0.01f);
     IntersectScene(ray, hit, occlusion);
     return hit;
 }

@@ -3,7 +3,9 @@
 #include <vector>
 #include <stdint.h>
 #include <glm/mat4x4.hpp>
+#include <glm/vec2.hpp>
 #include "TreeObject.h"
+#include "RayTracing/Ray.h"
 
 //! Node descriptor for the flattened tree
 struct alignas(16) BVHFlatNode
@@ -13,6 +15,7 @@ struct alignas(16) BVHFlatNode
     uint32_t start;
     uint32_t nPrims;
     uint32_t rightOffset;
+    bool intersect(Ray& ray, glm::vec2& nearFar);
 };
 
 //! \author Brandon Pelfrey

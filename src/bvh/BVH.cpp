@@ -1,5 +1,25 @@
-#include <algorithm>
 #include "BVH.h"
+#include <algorithm>
+
+glm::vec3 minVec3(glm::vec3 a, glm::vec3 b)
+{
+    return glm::vec3(std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z));
+}
+
+glm::vec3 maxVec3(glm::vec3 a, glm::vec3 b)
+{
+    return glm::vec3(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z));
+}
+
+float min3(glm::vec3 v)
+{
+    return std::min(std::min(v.x, v.y), v.z);
+}
+
+float max3(glm::vec3 v)
+{
+    return std::max(std::max(v.x, v.y), v.z);
+}
 
 BVH::BVH(uint32_t leafSize)
     : nNodes(0), nLeafs(0), leafSize(leafSize)
@@ -157,4 +177,19 @@ void BVH::addPrimitive(TreeObject* primitive)
 void BVH::clearPrimitives()
 {
     build_prims.clear();
+    nNodes = 0;
+    nLeafs = 0;
+}
+
+bool BVHFlatNode::intersect(Ray& ray, glm::vec2& nearFar)
+{
+    glm::vec3 invDir = 1.0f / ray.direction;
+    glm::vec3 originMinBound = min - ray.origin;
+    glm::vec3 originMaxBound = max - ray.origin;
+    glm::vec3 t0 = originMinBound * invDir;
+    glm::vec3 t1 = originMaxBound * invDir;
+
+    nearFar = glm::vec2(max3(minVec3(t0, t1)), min3(maxVec3(t0, t1)));
+
+    return nearFar.x <= nearFar.y && nearFar.y >= 0.0f;
 }
