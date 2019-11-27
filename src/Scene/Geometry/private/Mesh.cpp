@@ -1,28 +1,41 @@
 #include "Mesh.h"
 #include "Scene/Scene.h"
+#include "Scene/Geometry/Shape.h"
 
-Geometry::Mesh::Mesh(Scene& scene, std::string name, int primitiveOffset, int primitiveCount, glm::mat4x4 objectToWorld) :
-    Primitive(MESH, -1),
+Geometry::MeshInstance::MeshInstance(Mesh* parent, glm::mat4x4 objectToWorld) :
+    Primitive(MESH, -1, nullptr),
     BVH(1),
-    scene(&scene),
-    name(name),
+    parent(parent),
     objectToWorld(objectToWorld),
-    smoothing(true),
-    selected(false)
+    smoothing(true)
 {
-    for (int i = primitiveOffset; i < primitiveOffset + primitiveCount; i++)
-        addPrimitive(&this->scene->primitives[i]);
+    primitives.reserve(parent->triangles.size() + parent->spheres.size() + parent->cylinders.size());
+    for (int i = 0; i < parent->triangles.size(); i++)
+    {
+        primitives.push_back(Geometry::Primitive(Geometry::TRIANGLE, i, this));
+        addPrimitive(&primitives[primitives.size() - 1]);
+    }
+    for (int i = 0; i < parent->spheres.size(); i++)
+    {
+        primitives.push_back(Geometry::Primitive(Geometry::SPHERE, i, this));
+        addPrimitive(&primitives[primitives.size() - 1]);
+    }
+    for (int i = 0; i < parent->cylinders.size(); i++)
+    {
+        primitives.push_back(Geometry::Primitive(Geometry::CYLINDER, i, this));
+        addPrimitive(&primitives[primitives.size() - 1]);
+    }
     updateBVHs();
 }
 
-AABB Geometry::Mesh::getAABB(Scene& scene, glm::mat4x4& objectToWorld)
+AABB Geometry::MeshInstance::getAABB()
 {
     return AABB(getFlatTree()[0].min, getFlatTree()[0].max);
 }
 
-glm::vec3 Geometry::Mesh::getCentroid(Scene& scene, glm::mat4x4& objectToWorld)
+glm::vec3 Geometry::MeshInstance::getCentroid()
 {
-    AABB own = getAABB(scene, objectToWorld);
+    AABB own = getAABB();
     return glm::vec3(
         own.min.x + own.extent.x * 0.5f,
         own.min.y + own.extent.y * 0.5f,
@@ -30,21 +43,21 @@ glm::vec3 Geometry::Mesh::getCentroid(Scene& scene, glm::mat4x4& objectToWorld)
     );
 }
 
-void Geometry::Mesh::setObjectToWorld(glm::mat4x4& objectToWorld)
+void Geometry::MeshInstance::setObjectToWorld(glm::mat4x4& objectToWorld)
 {
     this->objectToWorld = objectToWorld;
     updateBVHs();
 }
 
-glm::mat4x4 Geometry::Mesh::getObjectToWorld()
+glm::mat4x4 Geometry::MeshInstance::getObjectToWorld()
 {
     return objectToWorld;
 }
 
-void Geometry::Mesh::updateBVHs()
+void Geometry::MeshInstance::updateBVHs()
 {
-    update(*this->scene, objectToWorld);
-    scene->setUpdateSceneBVH();
+    update();
+    parent->instanceChanged(); // TODOOOOOOOOO
 }
 
 // Node for storing state information during traversal.
@@ -55,7 +68,7 @@ struct BVHTraversal
     static BVHTraversal create(int i, float mint);
 };
 
-bool Geometry::GPU::Mesh::intersect(Ray& ray, Scene& scene, bool occlusion)
+bool Geometry::MeshInstance::intersect(Ray& ray, Scene& scene, bool occlusion)
 {
     glm::vec2 bbhitsc0, bbhitsc1;
     int closer, other;
@@ -65,7 +78,7 @@ bool Geometry::GPU::Mesh::intersect(Ray& ray, Scene& scene, bool occlusion)
     int stackptr = 0;
 
     // "Push" on the root node to the working set
-    todo[stackptr].i = this->bvhOffset;
+    todo[stackptr].i = 0;
     todo[stackptr].mint = -FLT_MAX;
     float tLast = ray.t;
 
@@ -75,7 +88,7 @@ bool Geometry::GPU::Mesh::intersect(Ray& ray, Scene& scene, bool occlusion)
         int ni = todo[stackptr].i;
         float near = todo[stackptr].mint;
         stackptr--;
-        auto& node = scene.meshBVHs[ni];
+        auto& node = getFlatTree()[ni];
 
         // If this node is further than the closest found intersection, continue
         if (near > ray.t)
@@ -86,8 +99,8 @@ bool Geometry::GPU::Mesh::intersect(Ray& ray, Scene& scene, bool occlusion)
         {
             for (int o = 0; o < node.nPrims; ++o)
             {
-                auto& primitive = scene.primitivesGPU[this->primitiveOffset + node.start + o];
-                if (primitive.intersect(ray, *this, scene) && occlusion)
+                auto primitive = dynamic_cast<Geometry::Primitive*>(getPrimitives()[node.start + o]);
+                if (primitive->intersect(ray, *this) && occlusion)
                     return true;
             }
         }
@@ -142,15 +155,7 @@ bool Geometry::GPU::Mesh::intersect(Ray& ray, Scene& scene, bool occlusion)
     return ray.t < tLast;
 }
 
-int Geometry::GPU::Mesh::getOriginalIndex(Scene& scene)
-{
-    for (int i = 0; i < scene.meshes.size(); i++)
-        if (scene.meshes[i].bvhOffset == this->bvhOffset)
-            return i;
-    return -1;
-}
-
-Geometry::GPU::Mesh::Mesh(::Geometry::Mesh& o) :
+Geometry::GPU::MeshInstance::MeshInstance(::Geometry::MeshInstance& o) :
     objectToWorld(o.objectToWorld),
     primitiveOffset(o.gpuPrimitiveOffset),
     bvhOffset(o.bvhOffset),

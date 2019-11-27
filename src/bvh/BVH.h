@@ -33,9 +33,7 @@ public:
 
 protected:
     //! Build the BVH tree out of build_prims
-    void update(Scene& scene);
-    //! Build the BVH tree out of build_prims
-    void update(Scene& scene, glm::mat4x4& objectToWorld);
+    void update();
 
 private:
     uint32_t nNodes, nLeafs, leafSize;

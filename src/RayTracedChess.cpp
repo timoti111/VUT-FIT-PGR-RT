@@ -43,17 +43,23 @@ RayTracedChess::RayTracedChess() : Application()
     vars.addInt32("workGroupSizeZ", workGroupSize[2]);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-    auto ident = glm::mat4x4(1.0f);
+    scene.setSceneUpdateCallback([=]()
+    {
+        updateBuffers();
+        resetTexture = true;
+    });
+
+        auto ident = glm::mat4x4(1.0f);
     double actTime = glfwGetTime();
-    scene.shapeFromObj("res/models/chess/set1/Knight.obj", "Knight");
-    scene.shapeFromObj("res/models/chess/board1/Board.obj", "Board");
+    scene.addShape(Geometry::Shape::fromObjFile("res/models/chess/set1/Knight.obj", "Knight"));
+    scene.addShape(Geometry::Shape::fromObjFile("res/models/chess/board1/Board.obj", "Board"));
     double time = glfwGetTime() - actTime;
     std::cout << "Model load time: " << time << std::endl;
     actTime = glfwGetTime();
-    scene.instantiateShape("Board", ident, false);
+    scene.instantiateShape("Board", ident);
     time = glfwGetTime() - actTime;
     std::cout << "BVH build time: " << time << std::endl;
-    scene.instantiateShape("Knight", glm::translate(ident, glm::vec3(-3.514, 0.80321, -3.514)), false);
+    scene.instantiateShape("Knight", glm::translate(ident, glm::vec3(-3.514, 0.80321, -3.514)));
     scene.updateBVHs();
     updateBuffers();
 }
@@ -102,13 +108,8 @@ void RayTracedChess::mouseButtonEvent(int button, int action, int mods)
     {
         double xpos, ypos;
         glfwGetCursorPos(window, &xpos, &ypos);
-        double actTime = glfwGetTime();
         Ray ray = Ray::createCameraRay(&camera, glm::vec2(xpos, height - ypos), glm::ivec2(width, height));
-        int ret = ray.traceRay(&scene, false);
-        ret = ret == -1 ? ret : scene.meshesGPU[ret].getOriginalIndex(scene);
-        scene.selectMesh(ret);
-        resetTexture = true;
-        updateBuffers();
+        scene.selectMesh(ray);
     }
 }
 

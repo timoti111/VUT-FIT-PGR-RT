@@ -12,7 +12,7 @@ struct BVHTraversal
     static BVHTraversal create(int i, float mint);
 };
 
-int Ray::traceRay(Scene* scene, bool occlusion)
+Geometry::MeshInstance* Ray::traceRay(Scene* scene, bool occlusion)
 {
     glm::vec2 bbhitsc0, bbhitsc1;
     int closer, other;
@@ -26,7 +26,7 @@ int Ray::traceRay(Scene* scene, bool occlusion)
     todo[stackptr].mint = -FLT_MAX;
     float tLast = this->t;
     auto& sceneBVH = scene->getFlatTree();
-    int meshID = -1;
+    Geometry::MeshInstance* meshInstance = nullptr;
 
     while (stackptr >= 0)
     {
@@ -34,7 +34,7 @@ int Ray::traceRay(Scene* scene, bool occlusion)
         int ni = todo[stackptr].i;
         float near = todo[stackptr].mint;
         stackptr--;
-        auto &node = sceneBVH[ni];
+        auto& node = sceneBVH[ni];
 
         // If this node is further than the closest found intersection, continue
         if (near > this->t)
@@ -45,14 +45,14 @@ int Ray::traceRay(Scene* scene, bool occlusion)
         {
             for (int o = 0; o < node.nPrims; ++o)
             {
-                auto& mesh = scene->meshesGPU[node.start + o];
-                if (mesh.materialID != -1)
+                Geometry::MeshInstance* mesh = dynamic_cast<Geometry::MeshInstance*>(scene->getPrimitives()[node.start + o]);
+                if (mesh->materialID != -1)
                 {
-                    if (mesh.intersect(*this, *scene, occlusion))
+                    if (mesh->intersect(*this, *scene, occlusion))
                     {
-                        meshID = node.start + o;
+                        meshInstance = mesh;
                         if (occlusion)
-                            return true;
+                            return meshInstance;
                     }
                 }
             }
@@ -105,7 +105,7 @@ int Ray::traceRay(Scene* scene, bool occlusion)
         }
     }
 
-    return meshID;
+    return meshInstance;
 }
 
 Ray Ray::createCameraRay(Camera* camera, glm::vec2 pixel, glm::ivec2 resolution)

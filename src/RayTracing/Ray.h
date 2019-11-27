@@ -4,11 +4,15 @@
 
 class Scene;
 class Camera;
+namespace Geometry
+{
+    class MeshInstance;
+}
 struct Ray
 {
     glm::vec4 origin;
     glm::vec4 direction;
     float t;
-    int traceRay(Scene* scene, bool occlusion);
+    Geometry::MeshInstance* traceRay(Scene* scene, bool occlusion);
     static Ray createCameraRay(Camera* camera, glm::vec2 pixel, glm::ivec2 resolution);
 };

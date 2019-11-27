@@ -4,27 +4,30 @@
 #include "Sphere.h"
 #include "Cylinder.h"
 #include "Mesh.h"
+#include "Scene/Geometry/Shape.h"
 
-Geometry::Primitive::Primitive(GLint type, GLint index)
-    : TreeObject(), type(type), index(index)
+Geometry::Primitive::Primitive(GLint type, GLint index, Geometry::MeshInstance* parent)
+    : TreeObject(), type(type), index(index), parent(parent)
 {}
 
-AABB Geometry::Primitive::getAABB(Scene& scene, glm::mat4x4& objectToWorld)
+AABB Geometry::Primitive::getAABB()
 {
     AABB ret;
     switch (type)
     {
         case TRIANGLE:
         {
-            Geometry::GPU::Triangle triangle = scene.triangles[index];
-            ret.expandToInclude(glm::vec3(objectToWorld * scene.vertices[triangle.vertices.x]));
-            ret.expandToInclude(glm::vec3(objectToWorld * scene.vertices[triangle.vertices.y]));
-            ret.expandToInclude(glm::vec3(objectToWorld * scene.vertices[triangle.vertices.z]));
+            auto& triangle = parent->parent->triangles[index];
+            auto& objectToWorld = parent->objectToWorld;
+            auto& vertices = parent->parent->parent->attributes.vertices;
+            ret.expandToInclude(glm::vec3(objectToWorld * vertices[triangle.vertices.x]));
+            ret.expandToInclude(glm::vec3(objectToWorld * vertices[triangle.vertices.y]));
+            ret.expandToInclude(glm::vec3(objectToWorld * vertices[triangle.vertices.z]));
             break;
         }
         case SPHERE:
         {
-            Geometry::GPU::Sphere sphere = scene.spheres[index];
+            auto& sphere = parent->parent->spheres[index];
             ret.expandToInclude(AABB(
                 glm::vec3(sphere.sphere) - glm::vec3(sphere.sphere.w),
                 glm::vec3(sphere.sphere) + glm::vec3(sphere.sphere.w)
@@ -33,7 +36,7 @@ AABB Geometry::Primitive::getAABB(Scene& scene, glm::mat4x4& objectToWorld)
         }
         case CYLINDER:
         {
-            Geometry::GPU::Cylinder cylinder = scene.cylinders[index];
+            auto& cylinder = parent->parent->cylinders[index];
             //glm::vec3 cylinderDirection = cylinder.end - cylinder.start;
             //glm::vec3 yzVector = glm::normalize(glm::cross(cylinderDirection, glm::vec3(1.0f, 0.0f, 0.0f)));
             //glm::vec3 xzVector = glm::normalize(glm::cross(cylinderDirection, glm::vec3(0.0f, 1.0f, 0.0f)));
@@ -71,29 +74,31 @@ AABB Geometry::Primitive::getAABB(Scene& scene, glm::mat4x4& objectToWorld)
     return ret;
 }
 
-glm::vec3 Geometry::Primitive::getCentroid(Scene& scene, glm::mat4x4& objectToWorld)
+glm::vec3 Geometry::Primitive::getCentroid()
 {
     glm::vec3 ret;
     switch (type)
     {
         case TRIANGLE:
         {
-            Geometry::GPU::Triangle triangle = scene.triangles[index];
-            ret = glm::vec3(objectToWorld * scene.vertices[triangle.vertices.x]);
-            ret += glm::vec3(objectToWorld * scene.vertices[triangle.vertices.y]);
-            ret += glm::vec3(objectToWorld * scene.vertices[triangle.vertices.z]);
+            auto& triangle = parent->parent->triangles[index];
+            auto& objectToWorld = parent->objectToWorld;
+            auto& vertices = parent->parent->parent->attributes.vertices;
+            ret = glm::vec3(objectToWorld * vertices[triangle.vertices.x]);
+            ret += glm::vec3(objectToWorld * vertices[triangle.vertices.y]);
+            ret += glm::vec3(objectToWorld * vertices[triangle.vertices.z]);
             ret /= 3.0f;
             break;
         }
         case SPHERE:
         {
-            Geometry::GPU::Sphere sphere = scene.spheres[index];
+            Geometry::GPU::Sphere sphere = parent->parent->spheres[index];
             ret = glm::vec3(sphere.sphere);
             break;
         }
         case CYLINDER:
         {
-            Geometry::GPU::Cylinder cylinder = scene.cylinders[index];
+            Geometry::GPU::Cylinder cylinder = parent->parent->cylinders[index];
             ret = glm::vec3(cylinder.start + cylinder.end);
             ret /= 2.0f;
             break;
@@ -108,16 +113,18 @@ glm::vec3 Geometry::Primitive::getCentroid(Scene& scene, glm::mat4x4& objectToWo
 }
 
 const float EPSILON = 1e-8;
-bool Geometry::GPU::Primitive::intersect(Ray& ray, ::Geometry::GPU::Mesh& mesh, Scene& scene)
+bool Geometry::Primitive::intersect(Ray& ray, ::Geometry::MeshInstance& mesh)
 {
     switch (type)
     {
         case TRIANGLE:
         {
-            Geometry::GPU::Triangle triangle = scene.triangles[index];
-            glm::vec3 vert0 = mesh.objectToWorld * scene.vertices[triangle.vertices.x];
-            glm::vec3 vert1 = mesh.objectToWorld * scene.vertices[triangle.vertices.y];
-            glm::vec3 vert2 = mesh.objectToWorld * scene.vertices[triangle.vertices.z];
+            auto& triangle = parent->parent->triangles[index];
+            auto& objectToWorld = parent->objectToWorld;
+            auto& vertices = parent->parent->parent->attributes.vertices;
+            glm::vec3 vert0 = objectToWorld * vertices[triangle.vertices.x];
+            glm::vec3 vert1 = objectToWorld * vertices[triangle.vertices.y];
+            glm::vec3 vert2 = objectToWorld * vertices[triangle.vertices.z];
             glm::vec3 edge1 = vert1 - vert0;
             glm::vec3 edge2 = vert2 - vert0;
             // begin calculating determinant - also used to calculate U parameter
@@ -148,12 +155,12 @@ bool Geometry::GPU::Primitive::intersect(Ray& ray, ::Geometry::GPU::Mesh& mesh, 
         }
         case SPHERE:
         {
-            Geometry::GPU::Sphere sphere = scene.spheres[index];
+            Geometry::GPU::Sphere sphere = parent->parent->spheres[index];
             return false;
         }
         case CYLINDER:
         {
-            Geometry::GPU::Cylinder cylinder = scene.cylinders[index];
+            Geometry::GPU::Cylinder cylinder = parent->parent->cylinders[index];
             return false;
         }
         default:

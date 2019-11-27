@@ -6,7 +6,8 @@
 #include <vector>
 #include <string>
 #include <limits>
-#include "Geometry/Geometry.h"
+#include <functional>
+#include "Geometry/Shape.h"
 
 const float kInfinity = std::numeric_limits<float>::max();
 
@@ -15,40 +16,23 @@ class Scene : public BVH
 public:
     Scene();
 
-    struct ShapePart
-    {
-        std::string name;
-        int primitiveOffset;
-        int primitiveCount;
-    };
-
-    struct Shape
-    {
-        // TODO ShapeBuilder
-        std::string name;
-        std::vector<ShapePart> shapeParts;
-        std::vector<int> references;
-    };
-
-    void shapeFromObj(std::string path, std::string name);
-    void instantiateShape(std::string shapeName, glm::mat4x4 objectToWorld, bool asOneMesh);
+    void addShape(std::shared_ptr<Geometry::Shape> shape);
+    void instantiateShape(std::string name, glm::mat4x4 objToWorld);
     void removeShape(std::string name);
-    void selectMesh(int index);
+    void selectMesh(Ray& ray);
     void setUpdateSceneBVH();
     void updateBVHs();
-    void sceneUpdatedCallback(); // TODO CALLBACK
+    void setSceneUpdateCallback(std::function<void()> callback);
 
-    std::vector<Geometry::Mesh> meshes;
-    std::vector<Geometry::Primitive> primitives;
 
     // All these vectors will be sent to GPU
-    std::vector<Geometry::GPU::Mesh> meshesGPU;
+    std::vector<Geometry::GPU::MeshInstance> meshesGPU;
     std::vector<Geometry::GPU::Primitive> primitivesGPU;
-
-    std::vector<Geometry::GPU::Triangle> triangles;
     std::vector<glm::vec4> vertices;
     std::vector<glm::vec4> normals;
     std::vector<glm::vec2> coords;
+
+    std::vector<Geometry::GPU::Triangle> triangles;
 
     std::vector<Geometry::GPU::Sphere> spheres;
 
@@ -56,8 +40,9 @@ public:
 
     std::vector<BVHFlatNode> meshBVHs;
 private:
-    std::vector<Shape> shapes;
+    std::function<void()> sceneUpdatedCallback;
+    std::vector<std::shared_ptr<Geometry::Shape>> shapes;
     bool updateSceneBVH = false;
-    int actualSelectedMesh = -1;
-    Shape createSelectedObjectShape(int index);
+    Geometry::MeshInstance* actualSelectedMesh = nullptr;
+    void createSelectedObjectShape();
 };

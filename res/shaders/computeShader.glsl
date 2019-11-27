@@ -852,12 +852,12 @@ vec3 Shade(inout Ray ray, RayHit hit)
         vec3 shadowRayDirection = lightDirection;
 
         // Return nothing// Shadow test ray
-//        Ray shadowRay = CreateRay(hit.position + hit.normal * 0.001f, vec4(shadowRayDirection, 0.0));
-//        RayHit shadowRayHit = CreateRayHit();
-//        if (Trace(shadowRay, shadowRayHit, true))
-//        {
-//            return vec3(0.0f);
-//        }
+        Ray shadowRay = CreateRay(hit.position + hit.normal * 0.001f, vec4(shadowRayDirection, 0.0));
+        RayHit shadowRayHit = Trace(shadowRay, true);
+        if (shadowRayHit.t < FLT_MAX)
+        {
+            return vec3(0.0f);
+        }
 //        return hit.albedo.xyz;
         vec3 lightColor = sampleEnviroment(lightDirection, 2.0);
 ////        vec3 lightColor = vec3(1.0f, 1.0f, 1.0f);

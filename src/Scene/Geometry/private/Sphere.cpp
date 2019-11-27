@@ -1,10 +1,9 @@
 #include "Sphere.h"
 
-Geometry::Sphere::Sphere(int index) :
-    Primitive(SPHERE, index)
+Geometry::Sphere::Sphere(glm::vec3 position, float radius) :
+    sphere(glm::vec4(position, radius))
 {}
 
-Geometry::GPU::Sphere::Sphere(glm::vec3 position, float radius)
-{
-    this->sphere = glm::vec4(position.x, position.y, position.z, radius);
-}
+Geometry::GPU::Sphere::Sphere(::Geometry::Sphere sphere) :
+    sphere(sphere.sphere)
+{}

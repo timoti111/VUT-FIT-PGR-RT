@@ -34,12 +34,6 @@ struct BVHBuildEntry
     uint32_t start, end;
 };
 
-void BVH::update(Scene& scene)
-{
-    glm::mat4x4 identity = glm::mat4x4(1.0f);
-    update(scene, identity);
-}
-
 /*! Build the BVH, given an input data set
  *  - Handling our own stack is quite a bit faster than the recursive style.
  *  - Each build stack entry's parent field eventually stores the offset
@@ -48,7 +42,7 @@ void BVH::update(Scene& scene)
  *    Untouched-1, and TouchedTwice).
  *  - The partition here was also slightly faster than std::partition.
  */
-void BVH::update(Scene& scene, glm::mat4x4& objectToWorld)
+void BVH::update()
 {
     BVHBuildEntry todo[128];
     uint32_t stackptr = 0;
@@ -79,12 +73,12 @@ void BVH::update(Scene& scene, glm::mat4x4& objectToWorld)
         node.rightOffset = Untouched;
 
         // Calculate the bounding box for this node
-        AABB bb(build_prims[start]->getAABB(scene, objectToWorld));
-        AABB bc(build_prims[start]->getCentroid(scene, objectToWorld));
+        AABB bb(build_prims[start]->getAABB());
+        AABB bc(build_prims[start]->getCentroid());
         for (uint32_t p = start + 1; p < end; ++p)
         {
-            bb.expandToInclude(build_prims[p]->getAABB(scene, objectToWorld));
-            bc.expandToInclude(build_prims[p]->getCentroid(scene, objectToWorld));
+            bb.expandToInclude(build_prims[p]->getAABB());
+            bc.expandToInclude(build_prims[p]->getCentroid());
         }
         node.max = glm::vec4(bb.max, 0.0f);
         node.min = glm::vec4(bb.min, 0.0f);
@@ -127,7 +121,7 @@ void BVH::update(Scene& scene, glm::mat4x4& objectToWorld)
         uint32_t mid = start;
         for (uint32_t i = start; i < end; ++i)
         {
-            if (build_prims[i]->getCentroid(scene, objectToWorld)[split_dim] < split_coord)
+            if (build_prims[i]->getCentroid()[split_dim] < split_coord)
             {
                 std::swap(build_prims[i], build_prims[mid]);
                 ++mid;
