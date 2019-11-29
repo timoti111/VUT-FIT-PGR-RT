@@ -5,10 +5,10 @@
 void Geometry::Shape::meshChanged()
 {}
 
-void Geometry::Shape::instantiate(glm::mat4x4 objectToWorld)
+void Geometry::Shape::instantiate(glm::mat4x4 objectToWorld, int materialID, bool smoothing)
 {
     for (auto& mesh : meshes)
-        mesh.instantiate(objectToWorld);
+        mesh.instantiate(objectToWorld, materialID, smoothing);
 }
 
 std::shared_ptr<Geometry::Shape> Geometry::Shape::fromObjFile(std::string path, std::string name)
@@ -16,7 +16,6 @@ std::shared_ptr<Geometry::Shape> Geometry::Shape::fromObjFile(std::string path, 
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
-
 
     std::string warn;
     std::string err;
@@ -69,10 +68,11 @@ void Geometry::Mesh::instanceChanged()
     parent->meshChanged();
 }
 
-void Geometry::Mesh::instantiate(glm::mat4x4 objectToWorld)
+std::shared_ptr<Geometry::MeshInstance> Geometry::Mesh::instantiate(glm::mat4x4 objectToWorld, int materialID, bool smoothing)
 {
-    auto mesh = std::make_shared<Geometry::MeshInstance>(this, objectToWorld);
+    auto mesh = std::make_shared<Geometry::MeshInstance>(this, objectToWorld, materialID, smoothing);
     instances.push_back(mesh);
+    return mesh;
 }
 
 Geometry::Mesh::Mesh(std::shared_ptr<Shape>& parent) :

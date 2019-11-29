@@ -10,11 +10,15 @@ namespace Geometry
     {
         MeshInstance(
             Mesh* parent,
-            glm::mat4x4 objectToWorld = glm::mat4x4(1.0f)
+            glm::mat4x4 objectToWorld,
+            int materialID,
+            bool smoothing
         );
         AABB getAABB();
         glm::vec3 getCentroid();
-        void setObjectToWorld(glm::mat4x4& objectToWorld);
+        void setObjectToWorld(glm::mat4x4 objectToWorld);
+        void setSmoothing(bool smoothing);
+        void setMaterialID(int materialID);
         glm::mat4x4 getObjectToWorld();
         void updateBVHs();
         bool intersect(Ray& ray, Scene& scene, bool occlusion);

@@ -2,12 +2,13 @@
 #include "Scene/Scene.h"
 #include "Scene/Geometry/Shape.h"
 
-Geometry::MeshInstance::MeshInstance(Mesh* parent, glm::mat4x4 objectToWorld) :
+Geometry::MeshInstance::MeshInstance(Mesh* parent, glm::mat4x4 objectToWorld, int materialID, bool smoothing) :
     Primitive(MESH, -1, nullptr),
     BVH(1),
     parent(parent),
     objectToWorld(objectToWorld),
-    smoothing(true)
+    materialID(materialID),
+    smoothing(smoothing)
 {
     primitives.reserve(parent->triangles.size() + parent->spheres.size() + parent->cylinders.size());
     for (int i = 0; i < parent->triangles.size(); i++)
@@ -43,10 +44,22 @@ glm::vec3 Geometry::MeshInstance::getCentroid()
     );
 }
 
-void Geometry::MeshInstance::setObjectToWorld(glm::mat4x4& objectToWorld)
+void Geometry::MeshInstance::setObjectToWorld(glm::mat4x4 objectToWorld)
 {
     this->objectToWorld = objectToWorld;
     updateBVHs();
+}
+
+void Geometry::MeshInstance::setSmoothing(bool smoothing)
+{
+    this->smoothing = smoothing;
+    parent->instanceChanged();
+}
+
+void Geometry::MeshInstance::setMaterialID(int materialID)
+{
+    this->materialID = materialID;
+    parent->instanceChanged();
 }
 
 glm::mat4x4 Geometry::MeshInstance::getObjectToWorld()
@@ -56,8 +69,11 @@ glm::mat4x4 Geometry::MeshInstance::getObjectToWorld()
 
 void Geometry::MeshInstance::updateBVHs()
 {
+    clearPrimitives();
+    for (auto& primitive : primitives)
+        addPrimitive(&primitive);
     update();
-    parent->instanceChanged(); // TODOOOOOOOOO
+    parent->instanceChanged();
 }
 
 // Node for storing state information during traversal.
@@ -106,8 +122,8 @@ bool Geometry::MeshInstance::intersect(Ray& ray, Scene& scene, bool occlusion)
         }
         else
         { // Not a leaf
-            auto& leftChild = scene.meshBVHs[ni + 1];
-            auto& rightChild = scene.meshBVHs[ni + node.rightOffset];
+            auto& leftChild = getFlatTree()[ni + 1];
+            auto& rightChild = getFlatTree()[ni + node.rightOffset];
 
             auto hitc0 = leftChild.intersect(ray, bbhitsc0);
             auto hitc1 = rightChild.intersect(ray, bbhitsc1);

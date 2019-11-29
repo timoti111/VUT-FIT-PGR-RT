@@ -1,12 +1,21 @@
 #pragma once
+#include <string>
+#include <map>
+#include "Scene/Scene.h"
+#include "Board.h"
+#include <map>
 
 namespace Chess
 {
-#include "Bishop.h"
-#include "Board.h"
-#include "King.h"
-#include "Knight.h"
-#include "Pawn.h"
-#include "Queen.h"
-#include "Rook.h"
+    class Chess : public Scene
+    {
+    public:
+        Chess(std::string boardDirectory , std::string setDirectory);
+
+        void drawSelectedPieceSettings();
+    private:
+        Board board;
+        std::map<Geometry::MeshInstance*, Piece> pieces;
+        int row = 0, col = 0;
+    };
 }

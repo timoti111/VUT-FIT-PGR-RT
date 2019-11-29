@@ -3,7 +3,7 @@
 #include "Vars/Vars.h"
 #include <string>
 #include "Scene/Camera.h"
-#include "Scene/Scene.h"
+#include "Chess/Chess.h"
 #include "Utils/hdrloader.h"
 
 class RayTracedChess : public Application {
@@ -28,6 +28,6 @@ private:
     bool drawGuiB = true;
     bool resetTexture = false;
     Camera camera;
-    Scene scene;
+    Chess::Chess scene;
     HDRLoaderResult backgroundTexture;
 };

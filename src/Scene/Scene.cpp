@@ -2,7 +2,7 @@
 #include <random>
 #include <glm/gtx/norm.hpp>
 
-Scene::Scene() : BVH(1)
+Scene::Scene() : BVH(4)
 {}
 
 void Scene::addShape(std::shared_ptr<Geometry::Shape> shape)
@@ -10,14 +10,14 @@ void Scene::addShape(std::shared_ptr<Geometry::Shape> shape)
     shapes.push_back(shape);
 }
 
-void Scene::instantiateShape(std::string name, glm::mat4x4 objToWorld)
+void Scene::instantiateShape(std::string name, glm::mat4x4 objToWorld, int materialID, bool smoothing)
 {
     bool found = false;
     for (int i = 0; i < shapes.size(); i++)
     {
         if (shapes[i]->name == name)
         {
-            shapes[i]->instantiate(objToWorld);
+            shapes[i]->instantiate(objToWorld, materialID, smoothing);
             found = true;
             break;
         }
@@ -50,19 +50,7 @@ void Scene::selectMesh(Ray& ray)
     actualSelectedMesh = ray.traceRay(this, false);
     if (actualSelectedMesh != oldSelectedMesh)
     {
-        try
-        {
-            removeShape("SelectedObject");
-        }
-        catch (const std::runtime_error & e)
-        {
-        }
-
-        if (actualSelectedMesh != nullptr)
-        {
-            createSelectedObjectShape();
-            instantiateShape("SelectedObject", glm::mat4x4(1.0f));
-        }
+        updateSelectedMesh = true;
     }
     updateBVHs();
 }
@@ -106,6 +94,24 @@ void Scene::setUpdateSceneBVH()
 
 void Scene::updateBVHs()
 {
+    if (updateSelectedMesh)
+    {
+        try
+        {
+            removeShape("SelectedObject");
+        }
+        catch (const std::runtime_error & e)
+        {
+        }
+
+        if (actualSelectedMesh != nullptr)
+        {
+            createSelectedObjectShape();
+            instantiateShape("SelectedObject", glm::mat4x4(1.0f));
+        }
+        updateSelectedMesh = false;
+    }
+
     if (!updateSceneBVH)
         return;
     updateSceneBVH = false;
@@ -135,7 +141,7 @@ void Scene::updateBVHs()
                 meshBVHs.insert(meshBVHs.end(), meshBVH.begin(), meshBVH.end());
                 for (auto& treePrims : meshInstance->getPrimitives())
                 {
-                    auto primitive = *dynamic_cast<Geometry::Primitive*>(treePrims);
+                    auto primitive = Geometry::GPU::Primitive(*dynamic_cast<Geometry::Primitive*>(treePrims));
                     switch (primitive.type)
                     {
                         case Geometry::TRIANGLE:
@@ -175,25 +181,25 @@ void Scene::updateBVHs()
 
     sceneUpdatedCallback();
 
- /*   Geometry::MeshInstance* selectedMesh = nullptr;
-    for (auto& mesh : meshes)
-    {
-        addPrimitive(&mesh);
-        mesh.bvhOffset = meshBVHs.size();
-        mesh.gpuPrimitiveOffset = primitivesGPU.size();
-        auto& meshBVH = mesh.getFlatTree();
-        meshBVHs.insert(meshBVHs.end(), meshBVH.begin(), meshBVH.end());
-        for (auto& treePrims : mesh.getPrimitives())
-            primitivesGPU.push_back(*dynamic_cast<Geometry::Primitive*>(treePrims));
-    }
+    /*   Geometry::MeshInstance* selectedMesh = nullptr;
+       for (auto& mesh : meshes)
+       {
+           addPrimitive(&mesh);
+           mesh.bvhOffset = meshBVHs.size();
+           mesh.gpuPrimitiveOffset = primitivesGPU.size();
+           auto& meshBVH = mesh.getFlatTree();
+           meshBVHs.insert(meshBVHs.end(), meshBVH.begin(), meshBVH.end());
+           for (auto& treePrims : mesh.getPrimitives())
+               primitivesGPU.push_back(*dynamic_cast<Geometry::Primitive*>(treePrims));
+       }
 
-    update(*this);
+       update(*this);
 
-    meshesGPU.clear();
-    for (auto& treePrimitive : getPrimitives())
-        meshesGPU.push_back(*dynamic_cast<Geometry::MeshInstance*>(treePrimitive));
+       meshesGPU.clear();
+       for (auto& treePrimitive : getPrimitives())
+           meshesGPU.push_back(*dynamic_cast<Geometry::MeshInstance*>(treePrimitive));
 
-    sceneUpdatedCallback();*/
+       sceneUpdatedCallback();*/
 
 
 }

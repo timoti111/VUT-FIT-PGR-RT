@@ -1,6 +1,6 @@
 #include "Camera.h"
 #include "glm/trigonometric.hpp"
-#include "../imgui/imgui.h"
+#include <imgui.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/mat4x4.hpp>
 

@@ -549,7 +549,10 @@ bool IntersectPrimitive(Ray ray, Primitive primitive, Mesh mesh, bool occlusion,
                     if (mesh.smoothing)
                     {
                         ivec3 nIndices = triangle.normals.xyz;
-                        intersection.normal = (1 - u - v) * normals[nIndices.x] + u * normals[nIndices.y] + v * normals[nIndices.z];
+                        vec4 n0 = (mesh.objectToWorld * normals[nIndices.x]);
+                        vec4 n1 = (mesh.objectToWorld * normals[nIndices.y]);
+                        vec4 n2 = (mesh.objectToWorld * normals[nIndices.z]);
+                        intersection.normal = (1 - u - v) * n0 + u * n1 + v * n2;
                     }
                     else
                         intersection.normal = vec4(normalize(cross(v1 - v0, v2 - v0)), 0.0f);
@@ -853,11 +856,11 @@ vec3 Shade(inout Ray ray, RayHit hit)
 
         // Return nothing// Shadow test ray
         Ray shadowRay = CreateRay(hit.position + hit.normal * 0.001f, vec4(shadowRayDirection, 0.0));
-        RayHit shadowRayHit = Trace(shadowRay, true);
-        if (shadowRayHit.t < FLT_MAX)
-        {
-            return vec3(0.0f);
-        }
+//        RayHit shadowRayHit = Trace(shadowRay, true);
+//        if (shadowRayHit.t < FLT_MAX)
+//        {
+//            return vec3(0.0f);
+//        }
 //        return hit.albedo.xyz;
         vec3 lightColor = sampleEnviroment(lightDirection, 2.0);
 ////        vec3 lightColor = vec3(1.0f, 1.0f, 1.0f);

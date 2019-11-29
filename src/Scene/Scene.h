@@ -17,7 +17,7 @@ public:
     Scene();
 
     void addShape(std::shared_ptr<Geometry::Shape> shape);
-    void instantiateShape(std::string name, glm::mat4x4 objToWorld);
+    void instantiateShape(std::string name, glm::mat4x4 objToWorld = glm::mat4x4(1.0f), int materialID = -1, bool smoothing = true);
     void removeShape(std::string name);
     void selectMesh(Ray& ray);
     void setUpdateSceneBVH();
@@ -40,9 +40,12 @@ public:
 
     std::vector<BVHFlatNode> meshBVHs;
 private:
-    std::function<void()> sceneUpdatedCallback;
     std::vector<std::shared_ptr<Geometry::Shape>> shapes;
-    bool updateSceneBVH = false;
-    Geometry::MeshInstance* actualSelectedMesh = nullptr;
     void createSelectedObjectShape();
+
+protected:
+    std::function<void()> sceneUpdatedCallback;
+    bool updateSceneBVH = false;
+    bool updateSelectedMesh = false;
+    Geometry::MeshInstance* actualSelectedMesh = nullptr;
 };

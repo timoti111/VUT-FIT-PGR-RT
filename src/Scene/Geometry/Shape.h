@@ -5,6 +5,7 @@
 #include <glm/vec2.hpp>
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
+#include <functional>
 #include "Geometry.h"
 
 namespace Geometry
@@ -27,7 +28,7 @@ namespace Geometry
 
         std::vector<std::shared_ptr<Geometry::MeshInstance>> instances;
         void instanceChanged();
-        void instantiate(glm::mat4x4 objectToWorld);
+        std::shared_ptr<Geometry::MeshInstance> instantiate(glm::mat4x4 objectToWorld, int materialID, bool smoothing);
         std::shared_ptr<Shape> parent;
     };
 
@@ -36,9 +37,8 @@ namespace Geometry
         std::string name;
         Attributes attributes;
         std::vector<Mesh> meshes;
-
         void meshChanged();
-        void instantiate(glm::mat4x4 objectToWorld);
+        void instantiate(glm::mat4x4 objectToWorld, int materialID, bool smoothing);
 
         static std::shared_ptr<Shape> fromObjFile(std::string path, std::string name);
     };

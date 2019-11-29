@@ -13,7 +13,7 @@
 //#include "Chess/Chess.h"
 //#include "Scene/Geometry/Shape.h"
 
-RayTracedChess::RayTracedChess() : Application()
+RayTracedChess::RayTracedChess() : Application(), scene("res/models/chess/board1/", "res/models/chess/set1/")
 {
     vars.add<ge::gl::Program>("computeProgram",
                               std::make_shared<ge::gl::Shader>(GL_COMPUTE_SHADER, Utils::readFileToString("res/shaders/computeShader.glsl")));
@@ -51,15 +51,19 @@ RayTracedChess::RayTracedChess() : Application()
 
         auto ident = glm::mat4x4(1.0f);
     double actTime = glfwGetTime();
-    scene.addShape(Geometry::Shape::fromObjFile("res/models/chess/set1/Knight.obj", "Knight"));
-    scene.addShape(Geometry::Shape::fromObjFile("res/models/chess/board1/Board.obj", "Board"));
-    double time = glfwGetTime() - actTime;
-    std::cout << "Model load time: " << time << std::endl;
-    actTime = glfwGetTime();
-    scene.instantiateShape("Board", ident);
-    time = glfwGetTime() - actTime;
-    std::cout << "BVH build time: " << time << std::endl;
-    scene.instantiateShape("Knight", glm::translate(ident, glm::vec3(-3.514, 0.80321, -3.514)));
+    //scene.addShape(Geometry::Shape::fromObjFile("res/models/chess/set1/Knight.obj", "Knight"));
+    //scene.addShape(Geometry::Shape::fromObjFile("res/models/chess/board1/Board.obj", "Board"));
+    //double time = glfwGetTime() - actTime;
+    //std::cout << "Model load time: " << time << std::endl;
+    //actTime = glfwGetTime();
+    //scene.instantiateShape("Board", ident);
+    //time = glfwGetTime() - actTime;
+    //std::cout << "BVH build time: " << time << std::endl;
+    //scene.instantiateShape("Knight", glm::translate(ident, glm::vec3(-3.514, 0.80321, -3.514)));
+
+    //scene.addShape(Geometry::Shape::fromObjFile("res/models/chess/set1/Chess.obj", "Sponza"));
+    //scene.instantiateShape("Sponza", ident);
+
     scene.updateBVHs();
     updateBuffers();
 }
@@ -104,7 +108,9 @@ void RayTracedChess::draw()
 
 void RayTracedChess::mouseButtonEvent(int button, int action, int mods)
 {
-    if (action == GLFW_RELEASE)
+    if (ImGui::IsAnyWindowFocused())
+        return;
+    if (action == GLFW_RELEASE && drawGuiB)
     {
         double xpos, ypos;
         glfwGetCursorPos(window, &xpos, &ypos);
@@ -115,6 +121,9 @@ void RayTracedChess::mouseButtonEvent(int button, int action, int mods)
 
 void RayTracedChess::mouseScrollEvent(double xoffset, double yoffset)
 {
+    if (drawGuiB)
+        return;
+
     if (yoffset > 0)
         speedMultiplier *= 1.5;
     if (yoffset < 0)
@@ -123,11 +132,13 @@ void RayTracedChess::mouseScrollEvent(double xoffset, double yoffset)
 
 void RayTracedChess::mouseMoveEvent(double xpos, double ypos)
 {
+    if (drawGuiB)
+        return;
+
+    ypos = -ypos;
     static double lastX, lastY;
     static double firstMouse = true;
     static float yaw = 0.0f, pitch = 0.0f;
-    if (drawGuiB)
-        return;
 
     if (firstMouse)
     {
@@ -163,6 +174,7 @@ void RayTracedChess::mouseMoveEvent(double xpos, double ypos)
 
 void RayTracedChess::keyEvent(int key, int scancode, int action, int mods)
 {
+
     static int moveMultiplier = 20;
     bool pressed = action == GLFW_PRESS;
     bool repeat = action == GLFW_REPEAT;
@@ -174,6 +186,10 @@ void RayTracedChess::keyEvent(int key, int scancode, int action, int mods)
         glfwSetInputMode(window, GLFW_CURSOR, drawGuiB ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
         return;
     }
+
+    if (drawGuiB)
+        return;
+
     if (key == GLFW_KEY_W && !repeat)
         camera.moveFront(pressed);
     if (key == GLFW_KEY_A && !repeat)
@@ -250,7 +266,9 @@ void RayTracedChess::drawGui(bool drawGui)
 
     ImGui::Begin("App info");
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+    //ImGui::ShowDemoWindow();
     ImGui::End();
 
     camera.drawImGui();
+    scene.drawSelectedPieceSettings();
 }
