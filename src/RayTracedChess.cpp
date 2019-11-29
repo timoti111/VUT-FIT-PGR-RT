@@ -13,7 +13,7 @@
 //#include "Chess/Chess.h"
 //#include "Scene/Geometry/Shape.h"
 
-RayTracedChess::RayTracedChess() : Application(), scene("res/models/chess/board1/", "res/models/chess/set1/")
+RayTracedChess::RayTracedChess() : Application(), scene("res/models/chess/board2/", "res/models/chess/set1/")
 {
     vars.add<ge::gl::Program>("computeProgram",
                               std::make_shared<ge::gl::Shader>(GL_COMPUTE_SHADER, Utils::readFileToString("res/shaders/computeShader.glsl")));

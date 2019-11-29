@@ -32,5 +32,6 @@ namespace Chess
         glm::vec3 h8Position;
         std::shared_ptr<Geometry::Shape> boardModel;
         std::map<std::string, std::pair<Piece*, glm::vec3>> boardIndexPositions;
+        float piecesScale;
     };
 }

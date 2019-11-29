@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<board>
+    <a1>
+        <position>
+            <x>-3.51398</x>
+            <y>0.591505</y>
+            <z>3.51411</z>
+        </position>
+    </a1>
+    <h8>
+        <position>
+            <x>3.51398f</x>
+            <y>0.591505</y>
+            <z>-3.51411</z>
+        </position>
+    </h8>
+    <pieceScale>1.0</pieceScale>
+</board>

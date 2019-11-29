@@ -1,6 +1,7 @@
 #include <imgui.h>
 #include "Chess.h"
 #include <glm/gtc/matrix_transform.hpp>
+#include "Utils/tinyxml2.h"
 
 Chess::Chess::Chess(std::string boardDirectory, std::string setDirectory) : 
     Scene(),
@@ -30,7 +31,7 @@ Chess::Chess::Chess(std::string boardDirectory, std::string setDirectory) :
     std::string queenIndices[] = { "D1", "D8" };
     std::string rookIndices[] = { "A1", "H1", "A8", "H8" };
 
-    auto ident = glm::mat4x4(1.0f);
+    auto ident = glm::mat4x4(1.0);
     for (int color = 0; color < 2; color++)
     {
         for (int i = 0; i < 2; i++)
@@ -84,7 +85,7 @@ void Chess::Chess::drawSelectedPieceSettings()
     if (actualSelectedMesh == nullptr)
         return;
 
-    if (actualSelectedMesh->parent->name == "Board")
+    if (!pieces.count(actualSelectedMesh))
         return;
 
     if (pieces.at(actualSelectedMesh).drawGui())
