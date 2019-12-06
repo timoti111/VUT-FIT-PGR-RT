@@ -164,9 +164,8 @@ void Scene::updateBVHs()
             for (auto& triangle : mesh.triangles)
                 triangles.push_back(Geometry::GPU::Triangle(triangle, offsets));
             for (auto& sphere : mesh.spheres)
-                spheres.push_back(Geometry::GPU::Sphere(sphere));
-            for (auto& cylinder : mesh.cylinders)
-                cylinders.push_back(Geometry::GPU::Cylinder(cylinder));
+            spheres.insert(spheres.end(), mesh.spheres.begin(), mesh.spheres.end());
+            cylinders.insert(cylinders.end(), mesh.cylinders.begin(), mesh.cylinders.end());
         }
         vertices.insert(vertices.end(), shape->attributes.vertices.begin(), shape->attributes.vertices.end());
         normals.insert(normals.end(), shape->attributes.normals.begin(), shape->attributes.normals.end());

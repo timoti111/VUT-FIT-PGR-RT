@@ -43,6 +43,7 @@ void Camera::rotateCamera(float yaw, float pitch)
 void Camera::setFov(float fov)
 {
     this->fov = fov;
+    sensorHalfWidth = glm::tan(glm::radians(fov * 0.5f));
 }
 
 void Camera::setAperture(float aperture)
@@ -86,11 +87,11 @@ void Camera::drawImGui()
     ImGui::Text("Movement Speed");
     ImGui::InputFloat("m/s", &speed, 0.01f, 1.0f, "%.3f");
     ImGui::End();
+    setFov(fov);
 }
 
 void Camera::update(double timeStep)
 {
-    sensorHalfWidth = glm::tan(glm::radians(fov * 0.5f));
     this->position += (this->direction * (float)movingFront - this->direction * (float)movingBack + this->left * (float)movingLeft - this->left * (float)movingRight) * (float)timeStep * speed;
 }
 

@@ -92,13 +92,13 @@ glm::vec3 Geometry::Primitive::getCentroid()
         }
         case SPHERE:
         {
-            Geometry::GPU::Sphere sphere = parent->parent->spheres[index];
+            auto& sphere = parent->parent->spheres[index];
             ret = glm::vec3(sphere.sphere);
             break;
         }
         case CYLINDER:
         {
-            Geometry::GPU::Cylinder cylinder = parent->parent->cylinders[index];
+            auto& cylinder = parent->parent->cylinders[index];
             ret = glm::vec3(cylinder.start + cylinder.end);
             ret /= 2.0f;
             break;
@@ -155,12 +155,12 @@ bool Geometry::Primitive::intersect(Ray& ray, ::Geometry::MeshInstance& mesh)
         }
         case SPHERE:
         {
-            Geometry::GPU::Sphere sphere = parent->parent->spheres[index];
+            auto& sphere = parent->parent->spheres[index];
             return false;
         }
         case CYLINDER:
         {
-            Geometry::GPU::Cylinder cylinder = parent->parent->cylinders[index];
+            auto& cylinder = parent->parent->cylinders[index];
             return false;
         }
         default:

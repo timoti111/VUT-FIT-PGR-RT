@@ -5,9 +5,3 @@ Geometry::Cylinder::Cylinder(glm::vec3 start, glm::vec3 end, float radius) :
     end(glm::vec4(end, 1.0f)),
     radius(radius)
 {}
-
-Geometry::GPU::Cylinder::Cylinder(::Geometry::Cylinder cylinder) :
-    start(cylinder.start),
-    end(cylinder.end),
-    radius(cylinder.radius)
-{}

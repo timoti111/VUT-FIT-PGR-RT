@@ -1,123 +1,10 @@
 #version 460
-#define FLT_MAX 3.402823466e+38
-#define FLT_MIN 1.175494351e-38
+
+#include defines.glsl
+#include structures.glsl
+#include buffers.glsl
 
 layout(local_size_x = 8, local_size_y = 8) in;
-
-struct Camera
-{
-    vec4 position;
-    vec4 direction;
-    vec4 up;
-    vec4 left;
-    float sensorHalfWidth;
-};
-uniform Camera camera;
-
-layout(rgba32f, binding = 1) uniform image2D destTex;
-layout(binding = 2) uniform sampler2D hdriTexture;
-
-struct BVHNode
-{
-    vec4 minBound;
-    vec4 maxBound;
-    uint start;
-    uint nPrims;
-    uint rightOffset;
-};
-layout(std430, binding = 3) buffer SceneBVHBuffer
-{
-    BVHNode sceneBVH[];
-};
-layout(std430, binding = 4) buffer MeshBVHsBuffer
-{
-    BVHNode meshBVHs[];
-};
-
-struct Mesh
-{
-    mat4x4 objectToWorld;
-    int primitiveOffset;
-    int bvhOffset;
-    int materialID;
-    bool smoothing;
-};
-layout(std430, binding = 5) buffer MeshesBuffer
-{
-    Mesh meshes[];
-};
-
-struct Primitive 
-{
-    int type;
-    int index;
-};
-layout(std430, binding = 6) buffer PrimitivesBuffer
-{
-    Primitive primitives[];
-};
-
-struct Triangle
-{
-    ivec4 vertices;
-    ivec4 normals;
-    ivec4 coords;
-};
-layout(std430, binding = 7) buffer TrianglesBuffer
-{
-    Triangle triangles[];
-};
-
-layout(std430, binding = 8) buffer VerticesBuffer
-{
-    vec4 vertices[];
-};
-
-layout(std430, binding = 9) buffer NormalsBuffer
-{
-    vec4 normals[];
-};
-
-layout(std430, binding = 10) buffer CoordsBuffer
-{
-    vec2 coords[];
-};
-
-struct Sphere
-{
-    vec4 sphere;
-};
-layout(std430, binding = 11) buffer SpheresBuffer
-{
-    Sphere spheres[];
-};
-
-struct Cylinder
-{
-    vec4 begin;
-    vec4 end;
-    float radius;
-};
-layout(std430, binding = 12) buffer CylindersBuffer
-{
-    Cylinder cylinders[];
-};
-
-struct Ray
-{
-    vec4 origin;
-    vec4 direction;
-    vec4 energy;
-};
-
-Ray CreateRay(vec4 origin, vec4 direction)
-{
-    Ray ray;
-    ray.origin = origin;
-    ray.direction = direction;
-    ray.energy = vec4(1.0f);
-    return ray;
-}
 
 Ray CreateCameraRay(vec2 pixel, ivec2 size)
 {
@@ -130,26 +17,6 @@ Ray CreateCameraRay(vec2 pixel, ivec2 size)
     vec4 direction = normalize(camera.direction + camera.left * (camera.sensorHalfWidth - pixel.x * pixelSize) + camera.up * (pixel.y * pixelSize - sensorHalfHeight));
     return CreateRay(camera.position, direction);
 }
-
-struct RayHit
-{
-    vec4 position;
-    vec4 normal;
-    vec4 albedo;
-    vec3 specular;
-    float t;
-};
-
-RayHit CreateRayHit()
-{
-    RayHit hit;
-    hit.position = vec4(0.0f);
-    hit.t = FLT_MAX;
-    hit.normal = vec4(0.0f);
-    hit.albedo = vec4(0.0f);
-    hit.specular = vec3(0.0f);
-    return hit;
-};
 
 void IntersectGroundPlane(Ray ray, inout RayHit bestHit)
 {
@@ -208,8 +75,6 @@ bool IntersectSphere(Ray ray, vec4 sphere, inout RayHit bestHit)
     }
     return false;
 }
-
-const float EPSILON = 1e-8;
 
 bool IntersectCylinder(Ray ray, inout RayHit bestHit, vec3 A, vec3 B, float R)
 {
@@ -521,10 +386,6 @@ BVHTraversal createBVHTraversal(int i, float mint)
     ret.mint = mint;
     return ret;
 }
-
-#define TRIANGLE 1
-#define SPHERE 2
-#define CYLINDER 3
 bool IntersectPrimitive(Ray ray, Primitive primitive, Mesh mesh, bool occlusion, inout RayHit intersection)
 {
     switch (primitive.type)
@@ -803,13 +664,10 @@ vec3 correctGamma(vec3 color, float gamma)
     return pow(mapped, vec3(1.0 / gamma));
 }
 
-const float PI = 3.14159265f;
-const float invPI = 1.0f / PI;
-const float GAMMA = 2.2;
 vec3 sampleEnviroment(vec3 direction, float lod)
 {
-        float theta = acos(direction.y) * invPI;
-        float phi = atan(direction.x, -direction.z) * -invPI * 0.5f;
+        float theta = acos(direction.y) * INVPI;
+        float phi = atan(direction.x, -direction.z) * -INVPI * 0.5f;
         return textureLod(hdriTexture, vec2(phi, theta), lod).xyz;
 }
 

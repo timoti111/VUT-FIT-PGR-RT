@@ -2,6 +2,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include "Utils/Shadinclude.hpp"
 
 static class Utils {// 1. retrieve the vertex/fragment source code from filePath
 public:

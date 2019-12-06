@@ -34,9 +34,9 @@ public:
 
     std::vector<Geometry::GPU::Triangle> triangles;
 
-    std::vector<Geometry::GPU::Sphere> spheres;
+    std::vector<Geometry::Sphere> spheres;
 
-    std::vector<Geometry::GPU::Cylinder> cylinders;
+    std::vector<Geometry::Cylinder> cylinders;
 
     std::vector<BVHFlatNode> meshBVHs;
 private:

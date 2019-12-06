@@ -30,4 +30,6 @@ private:
     Camera camera;
     Chess::Chess scene;
     HDRLoaderResult backgroundTexture;
+    double firstMouse = true;
+    static const int pathAlive = 500000;
 };
