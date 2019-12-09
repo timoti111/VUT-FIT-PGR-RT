@@ -2,9 +2,9 @@
 #include "Application.h"
 #include "Vars/Vars.h"
 #include <string>
-#include "Scene/Camera.h"
 #include "Chess/Chess.h"
 #include "Utils/hdrloader.h"
+#include "RenderInfo.h"
 
 class RayTracedChess : public Application {
 public:
@@ -21,15 +21,22 @@ public:
 private:
     vars::Vars vars;
 
+    void checkKeys();
     void initComputeShaderImage();
     void drawGui(bool drawGui);
-    double speedMultiplier = 1.0;
 
     bool drawGuiB = true;
-    bool resetTexture = false;
-    Camera camera;
+    bool updateParams = true;
     Chess::Chess scene;
+    RenderInfo renderInfo;
     HDRLoaderResult backgroundTexture;
     double firstMouse = true;
-    static const int pathAlive = 500000;
+    const int pathAlive = 2 << 19;
+    std::unique_ptr<ge::gl::Program> resetProgram;
+    std::unique_ptr<ge::gl::Program> logicProgram;
+    std::unique_ptr<ge::gl::Program> newPathProgram;
+    std::unique_ptr<ge::gl::Program> extRayProgram;
+    std::unique_ptr<ge::gl::Program> shadRayProgram;
+    std::unique_ptr<ge::gl::Program> basicMaterialProgram;
+    std::unique_ptr<ge::gl::Program> basicDrawProgram;
 };

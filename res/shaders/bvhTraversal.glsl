@@ -178,8 +178,12 @@ bool IntersectScene(Ray ray, bool occlusion, inout RayHit intersection)
             {
                 Mesh mesh = meshes[node.start + o];
 
-                if (IntersectMesh(ray, mesh, occlusion, intersection) && occlusion)
-                    return true;
+                if (IntersectMesh(ray, mesh, occlusion, intersection))
+                {
+                    if (occlusion)
+                        return true;
+                     intersection.meshIndex = int(node.start + o);
+                }
             }
         }
         else

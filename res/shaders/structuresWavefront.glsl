@@ -5,6 +5,8 @@ struct Camera
     vec4 up;
     vec4 left;
     float sensorHalfWidth;
+    float focusDistance;
+    float aperture;
 };
 
 struct BVHNode
@@ -71,6 +73,7 @@ struct RayHit
     vec2 uv;
     float t;
     int matID;
+    int meshIndex;
 };
 
 RayHit CreateRayHit()
@@ -78,6 +81,7 @@ RayHit CreateRayHit()
     RayHit hit;
     hit.t = FLT_MAX;
     hit.matID = -1;
+    hit.meshIndex = -1;
     return hit;
 };
 
@@ -88,16 +92,22 @@ struct PathState
     vec4 shadOrig;
     vec4 shadDir;
     vec4 color;
+    vec4 throughput;
+    vec4 lastColor;
+    vec4 lastThroughput;
     vec4 hitPos;
-    vec4 hitDir;
     vec4 hitNorm;
     vec2 hitUV;
     ivec2 pixelIndex;
 
     float t;
-    int state;
     int matID;
-    int pad1;
+    int pathLen;
+    bool shadowRayBlocked;
+    float shadowRayT;
+    uint seed;
+    int meshIndex;
+    int pad0;
 };
 
 struct RenderParameters
@@ -105,4 +115,12 @@ struct RenderParameters
     Camera camera;
     int maxBounces;
     bool useEnvironmentMap;
+};
+
+struct QueueLengths
+{
+    uint newPathCounter;
+    uint extensionRayCounter;
+    uint shadowRayCounter;
+    uint basicMaterialCounter;
 };

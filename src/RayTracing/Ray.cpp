@@ -1,6 +1,6 @@
 #include "Ray.h"
 #include "bvh/BVH.h"
-#include "Scene/Camera.h"
+#include "RenderInfo.h"
 #include "Scene/Scene.h"
 #define FLT_MAX 3.402823466e+38
 
@@ -108,13 +108,14 @@ Geometry::MeshInstance* Ray::traceRay(Scene* scene, bool occlusion)
     return meshInstance;
 }
 
-Ray Ray::createCameraRay(Camera* camera, glm::vec2 pixel, glm::ivec2 resolution)
+Ray Ray::createCameraRay(RenderInfo* renderInfo, glm::vec2 pixel, glm::ivec2 resolution)
 {
     Ray ray;
-    float sensorHalfHeight = (resolution.y * camera->getSensorHalfWidth()) / resolution.x;
-    float pixelSize = camera->getSensorHalfWidth() / (resolution.x * 0.5f);
-    ray.direction = glm::vec4(glm::normalize(camera->getDirection() + camera->getLeft() * (camera->getSensorHalfWidth() - (pixel.x + 0.5f) * pixelSize) + camera->getUp() * ((pixel.y + 0.5f) * pixelSize - sensorHalfHeight)), 0.0f);
-    ray.origin = glm::vec4(camera->getPosition(), 1.0);
+    auto& camera = renderInfo->renderParams.camera;
+    float sensorHalfHeight = (resolution.y * camera.sensorHalfWidth) / resolution.x;
+    float pixelSize = camera.sensorHalfWidth / (resolution.x * 0.5f);
+    ray.direction = glm::vec4(glm::normalize(glm::vec3(camera.direction + camera.left * (camera.sensorHalfWidth - (pixel.x + 0.5f) * pixelSize) + camera.up * ((pixel.y + 0.5f) * pixelSize - sensorHalfHeight))), 0.0f);
+    ray.origin = glm::vec4(camera.position);
     ray.t = FLT_MAX;
     return ray;
 }

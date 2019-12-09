@@ -8,8 +8,3 @@
 #define CYLINDER 3
 #define PI 3.14159265f
 #define INVPI 0.31830988f
-#define GAMMA 2.2
-
-#define UNINITIALIZED 0
-#define TRACING 1
-#define TERMINATED 2

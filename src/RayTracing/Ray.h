@@ -3,7 +3,7 @@
 #include <glm/vec2.hpp>
 
 class Scene;
-class Camera;
+class RenderInfo;
 namespace Geometry
 {
     class MeshInstance;
@@ -14,5 +14,5 @@ struct Ray
     glm::vec4 direction;
     float t;
     Geometry::MeshInstance* traceRay(Scene* scene, bool occlusion);
-    static Ray createCameraRay(Camera* camera, glm::vec2 pixel, glm::ivec2 resolution);
+    static Ray createCameraRay(RenderInfo* camera, glm::vec2 pixel, glm::ivec2 resolution);
 };

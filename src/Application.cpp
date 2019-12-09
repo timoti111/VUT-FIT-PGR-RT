@@ -76,9 +76,8 @@ void Application::start()
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        draw();
-
         glfwPollEvents();
+        draw();
     }
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();

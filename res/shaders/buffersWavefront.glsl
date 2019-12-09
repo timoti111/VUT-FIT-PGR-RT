@@ -1,34 +1,32 @@
-uniform Camera camera;
-layout(rgba32f, binding = 1) uniform image2D destTex;
-layout(binding = 2) uniform sampler2D hdriTexture;
-
-layout(std430, binding = 0) buffer RenderParametersBuffer
+// UNIFORMS
+layout(binding = 0) uniform RenderParametersBuffer
 {
     RenderParameters renderParameters;
 };
+layout(rgba32f, binding = 1) uniform image2D destTex;
+layout(binding = 2) uniform sampler2D hdriTexture;
 
-layout(binding = 0, offset = 0) uniform atomic_uint newPixelIndex;
+// BUFFERS
+layout(std430, binding = 0) buffer QueueLengthsBuffer
+{
+    QueueLengths queueLengths;
+};
 layout(std430, binding = 1) buffer PathStatesBuffer
 {
     PathState pathStates[];
 };
-
-layout(binding = 0, offset = 4) uniform atomic_uint newPathCounter;
 layout(std430, binding = 2) buffer NewPathBuffer
 {
     uint newPathIndices[];
 };
-layout(binding = 0, offset = 8) uniform atomic_uint extensionRayCounter;
 layout(std430, binding = 3) buffer ExtRayCastBuffer
 {
     uint extRayCastPaths[];
 };
-layout(binding = 0, offset = 12) uniform atomic_uint shadowRayCounter;
 layout(std430, binding = 4) buffer ShadowRayCastBuffer
 {
     uint shadowRayCastPaths[];
 };
-layout(binding = 0, offset = 16) uniform atomic_uint basicMaterialCounter;
 layout(std430, binding = 5) buffer BasicMaterialBuffer
 {
     uint basicMaterialPaths[];

@@ -32,8 +32,9 @@ vec4 pick_random_point_in_semisphere(vec3 v){
   return normalize(result);
 }
 
-vec4 correctGamma(vec4 color, float gamma)
+vec4 sampleEnviroment(vec4 direction, float lod)
 {
-    vec4 mapped = color / (color + vec4(1.0));
-    return pow(mapped, vec4(1.0 / gamma));
+    float theta = acos(direction.y) * INVPI;
+    float phi = atan(direction.x, -direction.z) * -INVPI * 0.5f;
+    return textureLod(hdriTexture, vec2(phi, theta), lod);
 }
