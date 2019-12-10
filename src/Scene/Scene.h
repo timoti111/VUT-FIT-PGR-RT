@@ -8,6 +8,7 @@
 #include <limits>
 #include <functional>
 #include "Geometry/Shape.h"
+#include "Geometry/Material.h"
 
 const float kInfinity = std::numeric_limits<float>::max();
 
@@ -22,7 +23,7 @@ public:
     void selectMesh(Ray& ray);
     void setUpdateSceneBVH();
     void updateBVHs();
-    void setSceneUpdateCallback(std::function<void()> callback);
+    void setSceneUpdateCallback(std::function<void(bool)> callback);
 
 
     // All these vectors will be sent to GPU
@@ -39,12 +40,14 @@ public:
     std::vector<Geometry::Cylinder> cylinders;
 
     std::vector<BVHFlatNode> meshBVHs;
+
+    std::vector<Material> materials;
 private:
     std::vector<std::shared_ptr<Geometry::Shape>> shapes;
     void createSelectedObjectShape();
 
 protected:
-    std::function<void()> sceneUpdatedCallback;
+    std::function<void(bool)> sceneUpdatedCallback;
     bool updateSceneBVH = false;
     bool updateSelectedMesh = false;
     Geometry::MeshInstance* actualSelectedMesh = nullptr;

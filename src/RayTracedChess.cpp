@@ -15,24 +15,29 @@
 
 RayTracedChess::RayTracedChess() : Application(), scene("res/models/chess/board2/", "res/models/chess/set1/")
 {
-    //vars.add<ge::gl::Program>("computeProgram",
-    //                          std::make_shared<ge::gl::Shader>(GL_COMPUTE_SHADER, Shadinclude::load("res/shaders/computeShader.glsl")));
+    // TODO ADD DYNAMIC DEFINES
+    std::cout << "Compiling reset shader" << std::endl;
     resetProgram = std::make_unique<ge::gl::Program>(
         std::make_shared<ge::gl::Shader>(GL_COMPUTE_SHADER, Shadinclude::load("res/shaders/reset.glsl")));
+    std::cout << "Compiling logic shader" << std::endl;
     logicProgram = std::make_unique<ge::gl::Program>(
         std::make_shared<ge::gl::Shader>(GL_COMPUTE_SHADER, Shadinclude::load("res/shaders/logic.glsl")));
+    std::cout << "Compiling newPath shader" << std::endl;
     newPathProgram = std::make_unique<ge::gl::Program>(
         std::make_shared<ge::gl::Shader>(GL_COMPUTE_SHADER, Shadinclude::load("res/shaders/newPath.glsl")));
+    std::cout << "Compiling extRay shader" << std::endl;
     extRayProgram = std::make_unique<ge::gl::Program>(
         std::make_shared<ge::gl::Shader>(GL_COMPUTE_SHADER, Shadinclude::load("res/shaders/extensionRayCast.glsl")));
-    shadRayProgram = std::make_unique<ge::gl::Program>(
-        std::make_shared<ge::gl::Shader>(GL_COMPUTE_SHADER, Shadinclude::load("res/shaders/shadowRayCast.glsl")));
+    //std::cout << "Compiling shadRay shader" << std::endl;
+    //shadRayProgram = std::make_unique<ge::gl::Program>(
+    //    std::make_shared<ge::gl::Shader>(GL_COMPUTE_SHADER, Shadinclude::load("res/shaders/shadowRayCast.glsl")));
+    std::cout << "Compiling material shader" << std::endl;
     basicMaterialProgram = std::make_unique<ge::gl::Program>(
         std::make_shared<ge::gl::Shader>(GL_COMPUTE_SHADER, Shadinclude::load("res/shaders/basicMaterial.glsl")));
+    std::cout << "Compiling draw shader" << std::endl;
     basicDrawProgram = std::make_unique<ge::gl::Program>(
         std::make_shared<ge::gl::Shader>(GL_VERTEX_SHADER, Shadinclude::load("res/shaders/basicVertexShader.glsl")),
         std::make_shared<ge::gl::Shader>(GL_FRAGMENT_SHADER, Shadinclude::load("res/shaders/basicFragmentShader.glsl")));
-    ;
     float data[] = { -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f };
     vars.add<ge::gl::Buffer>("backgroundQuad", sizeof(float) * 8, data);
     vars.add<ge::gl::VertexArray>("backgroundVAO")->addAttrib(
@@ -50,15 +55,12 @@ RayTracedChess::RayTracedChess() : Application(), scene("res/models/chess/board2
     initComputeShaderImage();
 
     static auto emptyCounters = std::vector<unsigned>(4, 0);
-    static auto emptyPaths = std::vector<float>(pathAlive * 52, 0.0f);
-    static auto emptyPathIndices = std::vector<int>(pathAlive, 0);
+    static auto emptyPaths = std::vector<float>(pathAlive * 64, 0.0f);
+    static auto emptyPathIndices = std::vector<unsigned>(pathAlive * 4, 0);
     vars.reCreate<ge::gl::Buffer>("renderParamsBuffer", sizeof(RenderParameters))->bindBase(GL_UNIFORM_BUFFER, 0);
     vars.reCreate<ge::gl::Buffer>("atomicCountersBuffer", emptyCounters, GL_DYNAMIC_DRAW)->bindBase(GL_SHADER_STORAGE_BUFFER, 0);
     vars.reCreate<ge::gl::Buffer>("pathsBuffer", emptyPaths, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 1);
     vars.reCreate<ge::gl::Buffer>("newPathBuffer", emptyPathIndices, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 2);
-    vars.reCreate<ge::gl::Buffer>("extRayCastBuffer", emptyPathIndices, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 3);
-    vars.reCreate<ge::gl::Buffer>("shadowRayCastBuffer", emptyPathIndices, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 4);
-    vars.reCreate<ge::gl::Buffer>("basicMaterialBuffer", emptyPathIndices, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 5);
 
     GLint workGroupSize[3];
     ge::gl::glGetProgramiv(logicProgram->getId(), GL_COMPUTE_WORK_GROUP_SIZE, workGroupSize);
@@ -66,15 +68,18 @@ RayTracedChess::RayTracedChess() : Application(), scene("res/models/chess/board2
     vars.addInt32("workGroupSizeY", workGroupSize[1]);
     vars.addInt32("workGroupSizeZ", workGroupSize[2]);
 
-    scene.setSceneUpdateCallback([=]()
+    scene.setSceneUpdateCallback([=](bool materials)
     {
-        updateBuffers();
-        updateParams = true;
+        if (materials)
+            vars.reCreate<ge::gl::Buffer>("materialsBuffer", scene.materials)->bindBase(GL_SHADER_STORAGE_BUFFER, 13);
+        else
+            updateBuffers();
+        resetRender = true;
     });
 
     renderInfo.setParamsUpdatedCallback([=]()
     {
-        updateParams = true;
+        resetRender = true;
     });
 
     scene.updateBVHs();
@@ -95,8 +100,6 @@ void RayTracedChess::draw()
 {
     static auto workGroupSizeXInv = 1.0 / static_cast<float>(vars.getInt32("workGroupSizeX"));
     static auto workGroupSizeYInv = 1.0 / static_cast<float>(vars.getInt32("workGroupSizeY"));
-    checkKeys();
-
     static auto renderParamsBuffer = vars.get<ge::gl::Buffer>("renderParamsBuffer");
     static auto atomicCountersBuffer = vars.get<ge::gl::Buffer>("atomicCountersBuffer");
     static auto zeroCounters = std::vector<unsigned>(4, 0);
@@ -106,12 +109,15 @@ void RayTracedChess::draw()
     static GLuint currentPixelIndex = 0;
     static RenderParameters actualRenderParameters;
 
-    if (updateParams)
+    if (!drawGuiB)
+        checkKeys();
+
+    if (resetRender)
     {
         actualRenderParameters = renderInfo.renderParams;
         actualRenderParameters.maxBounces = renderInfo.getPreviewBounces();
         renderParamsBuffer->setData(&actualRenderParameters, sizeof(RenderParameters));
-        updateParams = false;
+        resetRender = false;
         iteration = 0;
         newPaths = 0;
     }
@@ -124,7 +130,7 @@ void RayTracedChess::draw()
         if (iteration == 0)
             advanceBy = std::numeric_limits<int>::max();
 
-        resetProgram->set("firstIteration", GLuint(iteration == 0));
+        resetProgram->set("firstIteration", GLint(iteration == 0));
         resetProgram->dispatch((int)ceil(std::max(pathAlive, width * height) * workGroupSizeXInv), 1, 1);
         newPathProgram->set("newPixelIndex", currentPixelIndex);
         atomicCountersBuffer->getData(&newPaths, sizeof(newPaths));
@@ -138,7 +144,7 @@ void RayTracedChess::draw()
     {
         newPathProgram->set("newPixelIndex", currentPixelIndex);
         logicProgram->set("currentPixelCount", currentPixelIndex);
-        logicProgram->set("firstIteration", GLuint(iteration == 0));
+        logicProgram->set("firstIteration", GLint(iteration == 0));
         logicProgram->dispatch((int)ceil(pathAlive * workGroupSizeXInv), 1, 1);
         if (iteration == 0)
         {
@@ -150,9 +156,7 @@ void RayTracedChess::draw()
         else
             atomicCountersBuffer->getData(&newPaths, sizeof(newPaths));
         currentPixelIndex += newPaths;
-        newPathProgram->set("globalSeed", (float)glfwGetTime());
         newPathProgram->dispatch((int)ceil(pathAlive * workGroupSizeXInv), 1, 1);
-        basicMaterialProgram->set("firstIteration", GLuint(iteration == 0));
         basicMaterialProgram->dispatch((int)ceil(pathAlive * workGroupSizeXInv), 1, 1);
         extRayProgram->dispatch((int)ceil(pathAlive * workGroupSizeXInv), 1, 1);
         //shadRayProgram->dispatch((int)ceil(pathAlive * workGroupSizeXInv), 1, 1);
@@ -162,10 +166,9 @@ void RayTracedChess::draw()
     if (iteration == 0)
     {
         actualRenderParameters.maxBounces = renderInfo.renderParams.maxBounces;
-        renderParamsBuffer->setData(&actualRenderParameters, sizeof(RenderParameters));
-        //renderParamsBuffer->setData(&actualRenderParameters.maxBounces,
-        //                            sizeof(actualRenderParameters.maxBounces),
-        //                            (char*)(&actualRenderParameters.maxBounces) - (char*)(&actualRenderParameters));
+        renderParamsBuffer->setData(&actualRenderParameters.maxBounces,
+                                    sizeof(actualRenderParameters.maxBounces),
+                                    (char*)(&actualRenderParameters.maxBounces) - (char*)(&actualRenderParameters));
     }
 
     basicDrawProgram->use();
@@ -243,21 +246,23 @@ void RayTracedChess::checkKeys()
 void RayTracedChess::resizeEvent(int x, int y)
 {
     initComputeShaderImage();
-    updateParams = true;
+    resetRender = true;
 }
 
 void RayTracedChess::updateBuffers()
 {
-    vars.reCreate<ge::gl::Buffer>("sceneBVHBuffer", scene.getFlatTree(), GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 6);
-    vars.reCreate<ge::gl::Buffer>("meshBHVs", scene.meshBVHs, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 7);
-    vars.reCreate<ge::gl::Buffer>("meshesBuffer", scene.meshesGPU, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 8);
-    vars.reCreate<ge::gl::Buffer>("primitivesBuffer", scene.primitivesGPU, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 9);
-    vars.reCreate<ge::gl::Buffer>("trianglesBuffer", scene.triangles, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 10);
-    vars.reCreate<ge::gl::Buffer>("verticesBuffer", scene.vertices, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 11);
-    vars.reCreate<ge::gl::Buffer>("normalsBuffer", scene.normals, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 12);
-    vars.reCreate<ge::gl::Buffer>("coordsBuffer", scene.coords, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 13);
-    vars.reCreate<ge::gl::Buffer>("spheresBuffer", scene.spheres, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 14);
-    vars.reCreate<ge::gl::Buffer>("cylindersBuffer", scene.cylinders, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 15);
+    static auto dummyMaterial = std::vector<unsigned>(20 * 4, 0);
+    vars.reCreate<ge::gl::Buffer>("sceneBVHBuffer", scene.getFlatTree(), GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 3);
+    vars.reCreate<ge::gl::Buffer>("meshBHVs", scene.meshBVHs, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 4);
+    vars.reCreate<ge::gl::Buffer>("meshesBuffer", scene.meshesGPU, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 5);
+    vars.reCreate<ge::gl::Buffer>("primitivesBuffer", scene.primitivesGPU, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 6);
+    vars.reCreate<ge::gl::Buffer>("trianglesBuffer", scene.triangles, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 7);
+    vars.reCreate<ge::gl::Buffer>("verticesBuffer", scene.vertices, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 8);
+    vars.reCreate<ge::gl::Buffer>("normalsBuffer", scene.normals, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 9);
+    vars.reCreate<ge::gl::Buffer>("coordsBuffer", scene.coords, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 10);
+    vars.reCreate<ge::gl::Buffer>("spheresBuffer", scene.spheres, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 11);
+    vars.reCreate<ge::gl::Buffer>("cylindersBuffer", scene.cylinders, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, 12);
+    vars.reCreate<ge::gl::Buffer>("materialsBuffer", scene.materials)->bindBase(GL_SHADER_STORAGE_BUFFER, 13);
 }
 
 void RayTracedChess::drawGui(bool drawGui)
@@ -269,6 +274,6 @@ void RayTracedChess::drawGui(bool drawGui)
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
     ImGui::End();
 
-    renderInfo.drawImGui();
-    //scene.drawSelectedPieceSettings();
+    renderInfo.drawGui();
+    scene.drawGui();
 }

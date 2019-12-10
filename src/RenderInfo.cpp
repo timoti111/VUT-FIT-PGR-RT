@@ -14,7 +14,11 @@ RenderInfo::RenderInfo()
     rotation = glm::vec2(0.0f, 0.0f);
     renderParams.camera.aperture = 0.0f;
     renderParams.camera.focusDistance = 1.0f;
-    renderParams.maxBounces = 8;
+    renderParams.maxBounces = 3;
+    renderParams.backgroundIntensity = 1.0f;
+    renderParams.backgroundColor = glm::vec4(1.0f);
+    renderParams.useEnvironmentMap = true;
+    renderParams.useRussianRoulette = true;
     previewBounces = 1;
     setFov(90.0f);
 }
@@ -53,6 +57,51 @@ void RenderInfo::setFov(float fov)
     }
 }
 
+void RenderInfo::setBackgroundColor(glm::vec4 color)
+{
+    if (renderParams.backgroundColor != color)
+    {
+        renderParams.backgroundColor = color;
+        paramsUpdatedCallback();
+    }
+}
+
+void RenderInfo::setBackgroundIntensity(float intensity)
+{
+    if (renderParams.backgroundIntensity != intensity)
+    {
+        renderParams.backgroundIntensity = intensity;
+        paramsUpdatedCallback();
+    }
+}
+
+void RenderInfo::setMaxBounces(int bounces)
+{
+    if (renderParams.maxBounces != bounces && bounces > 0)
+    {
+        renderParams.maxBounces = bounces;
+        paramsUpdatedCallback();
+    }
+}
+
+void RenderInfo::setUseEnvironmentMap(bool useEnvironmentMap)
+{
+    if (renderParams.useEnvironmentMap != useEnvironmentMap)
+    {
+        renderParams.useEnvironmentMap = useEnvironmentMap;
+        paramsUpdatedCallback();
+    }
+}
+
+void RenderInfo::setUseRussianRoulette(bool useRussianRoulette)
+{
+    if (renderParams.useRussianRoulette != useRussianRoulette)
+    {
+        renderParams.useRussianRoulette = useRussianRoulette;
+        paramsUpdatedCallback();
+    }
+}
+
 void RenderInfo::setAperture(float aperture)
 {
     if (renderParams.camera.aperture != aperture)
@@ -71,16 +120,54 @@ void RenderInfo::setFocusDistance(float focusDistance)
     }
 }
 
-void RenderInfo::drawImGui()
+void RenderInfo::drawGui()
 {
-    float fov = this->fov;
+    static bool useAperture = false;
+    const static float apertureZero = 0.0f;
+    const static float focusApertureZero = 1.0f;
+    static auto apertureOld = renderParams.camera.aperture;
+    static auto focusOld = renderParams.camera.focusDistance;
+    bool changed = false;
     ImGui::Begin("Render Settings");
-    ImGui::Text("Field of view");
-    ImGui::SliderFloat("degrees", &fov, 10.0f, 180.0f);
-    ImGui::Text("Movement Speed");
-    ImGui::InputFloat("m/s", &speed, 0.01f, 1.0f, "%.3f");
+    ImGui::Text("Max bounces");
+    changed |= ImGui::InputInt("bounces", &renderParams.maxBounces);
+    changed |= ImGui::Checkbox("Use russian roulette", &renderParams.useRussianRoulette);
+    if (ImGui::CollapsingHeader("Background settings"))
+    {
+        changed |= ImGui::ColorEdit3("Background color", &renderParams.backgroundColor.x);
+        changed |= ImGui::Checkbox("Use environment map", &renderParams.useEnvironmentMap);
+        ImGui::Text("Background Intensity");
+        changed |= ImGui::SliderFloat("", &renderParams.backgroundIntensity, 0.1f, 100.0f);
+    }
+    if (ImGui::CollapsingHeader("Camera settings"))
+    {
+        ImGui::Text("Field of view");
+        bool fovChanged = ImGui::SliderFloat("degrees", &fov, 10.0f, 180.0f);
+        if (fovChanged)
+            renderParams.camera.sensorHalfWidth = glm::tan(glm::radians(fov * 0.5f));
+        changed |= fovChanged;
+        ImGui::Text("Movement Speed");
+        changed |= ImGui::InputFloat("m/s", &speed, 0.01f, 1.0f, "%.3f");
+
+        ImGui::Checkbox("Use aperture", &useAperture);
+        if (useAperture)
+        {
+            ImGui::Text("Aperture");
+            ImGui::SliderFloat("m", &apertureOld, 0.0f, 180.0f);
+            ImGui::Text("Focus distance");
+            ImGui::SliderFloat("m", &focusOld, 0.0f, 180.0f);
+            setAperture(apertureOld);
+            setFocusDistance(focusOld);
+        }
+        else
+        {
+            setAperture(apertureZero);
+            setFocusDistance(focusApertureZero);
+        }
+    }
     ImGui::End();
-    setFov(fov);
+    if (changed)
+        paramsUpdatedCallback();
 }
 
 int RenderInfo::getPreviewBounces()
@@ -107,19 +194,16 @@ void RenderInfo::rotateCamera(glm::vec2 delta)
     static auto zeroDelta = glm::vec2(0.0f);
     static auto ident = glm::mat4x4(1.0f);
 
-        rotation += delta * 0.1f;
-        if (rotation.x < 0.0f) rotation.x += 360.0f;
-        if (rotation.y < 0.0f) rotation.y += 360.0f;
-        if (rotation.x > 360.0f) rotation.x -= 360.0f;
-        if (rotation.y > 360.0f) rotation.y -= 360.0f;
-        auto mat = glm::rotate(ident, glm::radians(rotation.y), glm::vec3(1.0f, 0.0f, 0.0f)) * glm::rotate(ident, glm::radians(rotation.x), glm::vec3(0.0f, 1.0f, 0.0f));
-        renderParams.camera.left = glm::vec4(mat[0][0], mat[1][0], mat[2][0], 0.0f);
-        renderParams.camera.up = glm::vec4(mat[0][1], mat[1][1], mat[2][1], 0.0f);
-        renderParams.camera.direction = glm::vec4(mat[0][2], mat[1][2], mat[2][2], 0.0f);
-    /*if (delta != zeroDelta)
-    {*/
-        paramsUpdatedCallback();
-    //}
+    rotation += delta * 0.1f;
+    if (rotation.x < 0.0f) rotation.x += 360.0f;
+    if (rotation.y < 0.0f) rotation.y += 360.0f;
+    if (rotation.x > 360.0f) rotation.x -= 360.0f;
+    if (rotation.y > 360.0f) rotation.y -= 360.0f;
+    auto mat = glm::rotate(ident, glm::radians(rotation.y), glm::vec3(1.0f, 0.0f, 0.0f)) * glm::rotate(ident, glm::radians(rotation.x), glm::vec3(0.0f, 1.0f, 0.0f));
+    renderParams.camera.left = glm::vec4(mat[0][0], mat[1][0], mat[2][0], 0.0f);
+    renderParams.camera.up = glm::vec4(mat[0][1], mat[1][1], mat[2][1], 0.0f);
+    renderParams.camera.direction = glm::vec4(mat[0][2], mat[1][2], mat[2][2], 0.0f);
+    paramsUpdatedCallback();
 }
 
 void RenderInfo::setParamsUpdatedCallback(std::function<void()> callback)

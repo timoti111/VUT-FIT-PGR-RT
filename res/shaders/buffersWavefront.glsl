@@ -17,57 +17,52 @@ layout(std430, binding = 1) buffer PathStatesBuffer
 };
 layout(std430, binding = 2) buffer NewPathBuffer
 {
-    uint newPathIndices[];
+    uint newPathIndices[NUM_PATHS];
+    uint extRayCastPaths[NUM_PATHS];
+    uint shadowRayCastPaths[NUM_PATHS];
+    uint basicMaterialPaths[NUM_PATHS];
 };
-layout(std430, binding = 3) buffer ExtRayCastBuffer
-{
-    uint extRayCastPaths[];
-};
-layout(std430, binding = 4) buffer ShadowRayCastBuffer
-{
-    uint shadowRayCastPaths[];
-};
-layout(std430, binding = 5) buffer BasicMaterialBuffer
-{
-    uint basicMaterialPaths[];
-};
-layout(std430, binding = 6) buffer SceneBVHBuffer
+layout(std430, binding = 3) buffer SceneBVHBuffer
 {
     BVHNode sceneBVH[];
 };
-layout(std430, binding = 7) buffer MeshBVHsBuffer
+layout(std430, binding = 4) buffer MeshBVHsBuffer
 {
     BVHNode meshBVHs[];
 };
-layout(std430, binding = 8) buffer MeshesBuffer
+layout(std430, binding = 5) buffer MeshesBuffer
 {
     Mesh meshes[];
 };
-layout(std430, binding = 9) buffer PrimitivesBuffer
+layout(std430, binding = 6) buffer PrimitivesBuffer
 {
     Primitive primitives[];
 };
-layout(std430, binding = 10) buffer TrianglesBuffer
+layout(std430, binding = 7) buffer TrianglesBuffer
 {
     Triangle triangles[];
 };
-layout(std430, binding = 11) buffer VerticesBuffer
+layout(std430, binding = 8) buffer VerticesBuffer
 {
     vec4 vertices[];
 };
-layout(std430, binding = 12) buffer NormalsBuffer
+layout(std430, binding = 9) buffer NormalsBuffer
 {
     vec4 normals[];
 };
-layout(std430, binding = 13) buffer CoordsBuffer
+layout(std430, binding = 10) buffer CoordsBuffer
 {
     vec2 coords[];
 };
-layout(std430, binding = 14) buffer SpheresBuffer
+layout(std430, binding = 11) buffer SpheresBuffer
 {
     Sphere spheres[];
 };
-layout(std430, binding = 15) buffer CylindersBuffer
+layout(std430, binding = 12) buffer CylindersBuffer
 {
     Cylinder cylinders[];
+};
+layout(std430, binding = 13) buffer MaterialsBuffer
+{
+    Material materials[];
 };

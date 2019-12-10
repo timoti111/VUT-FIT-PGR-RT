@@ -77,6 +77,27 @@ Chess::Chess::Chess(std::string boardDirectory, std::string setDirectory) :
             pieces.at(instance.get()).placeAt(rookIndices[i + color * 2]);
         }
     }
+
+    Material blackPiecesMaterial;
+    blackPiecesMaterial.Kd = glm::vec4(0.1f);
+    blackPiecesMaterial.type = DIFFUSE;
+    materials.push_back(blackPiecesMaterial);
+
+    Material whitePiecesMaterial;
+    whitePiecesMaterial.Kd = glm::vec4(0.9f);
+    whitePiecesMaterial.type = DIFFUSE;
+    materials.push_back(whitePiecesMaterial);
+
+    Material boardMaterial;
+    boardMaterial.Kd = glm::vec4(0.5f);
+    boardMaterial.type = DIFFUSE;
+    materials.push_back(boardMaterial);
+
+    Material selectedPieceMaterial;
+    selectedPieceMaterial.Ke = glm::vec4(0.0f, 0.5f, 1.0f, 0.0f);
+    selectedPieceMaterial.type = EMISSIVE;
+    materials.push_back(selectedPieceMaterial);
+
     updateSceneBVH = true;
 }
 
@@ -93,4 +114,33 @@ void Chess::Chess::drawSelectedPieceSettings()
         updateSelectedMesh = true;
         updateBVHs();
     }
+}
+
+void Chess::Chess::drawMaterialSettings()
+{
+    static std::vector<std::string> materialNames = {
+        "Black pieces material",
+        "White pieces material",
+        "Board material",
+        "Selection box material"
+    };
+
+    bool changed = false;
+    ImGui::Begin("Material settings");
+    for (int i = 0; i < materials.size(); i++)
+    {
+        if (ImGui::CollapsingHeader(materialNames[i].c_str()))
+        {
+            changed |= materials[i].drawGUI();
+        }
+    }
+    ImGui::End();
+    if (changed)
+        sceneUpdatedCallback(true);
+}
+
+void Chess::Chess::drawGui()
+{
+    drawSelectedPieceSettings();
+    drawMaterialSettings();
 }

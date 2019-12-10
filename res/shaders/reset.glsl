@@ -14,14 +14,16 @@ void main()
     if (storePos.y < texSize.y)
         imageStore(destTex, storePos, vec4(0.0f));
 
-    uint maxID = firstIteration ? min(texSize.x * texSize.y, pathStates.length()) : pathStates.length();
+    uint maxID = firstIteration ? min(texSize.x * texSize.y, NUM_PATHS) : NUM_PATHS;
     if (globalInvocationID >= maxID)
         return;
     pathStates[globalInvocationID].seed = globalInvocationID;
 
     newPathIndices[globalInvocationID] = globalInvocationID;
     if (globalInvocationID == 0)
+    {
         queueLengths.newPathCounter = maxID;
+    }
 }
 
 

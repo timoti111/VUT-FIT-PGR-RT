@@ -55,38 +55,6 @@ void Scene::selectMesh(Ray& ray)
     updateBVHs();
 }
 
-//void Scene::selectMesh(int index)
-//{
-//    if (actualSelectedMesh != -1 || index == -1)
-//    {
-//        try
-//        {
-//            removeShape("SelectedObject");
-//        }
-//        catch (const std::runtime_error& e)
-//        {
-//        }
-//    }
-//
-//    if (index != -1)
-//    {
-//        this->shapes.push_back(createSelectedObjectShape(index));
-//        instantiateShape("SelectedObject", glm::mat4x4(1.0f), true);
-//        //Geometry::Mesh mesh = Geometry::Mesh(
-//        //    *this,
-//        //    "SelectedObject",
-//        //    actualPrimitiveCount,
-//        //    20,
-//        //    glm::mat4x4(1.0f));
-//        //meshes.push_back(mesh);
-//
-//    }
-//    // createMesh "SelectedObject"
-//
-//    actualSelectedMesh = index;
-//    updateBVHs();
-//}
-
 void Scene::setUpdateSceneBVH()
 {
     updateSceneBVH = true;
@@ -107,7 +75,7 @@ void Scene::updateBVHs()
         if (actualSelectedMesh != nullptr)
         {
             createSelectedObjectShape();
-            instantiateShape("SelectedObject", glm::mat4x4(1.0f));
+            instantiateShape("SelectedObject", glm::mat4x4(1.0f), 3);
         }
         updateSelectedMesh = false;
     }
@@ -176,9 +144,9 @@ void Scene::updateBVHs()
 
     meshesGPU.clear();
     for (auto& treePrimitive : getPrimitives())
-        meshesGPU.push_back(*dynamic_cast<Geometry::MeshInstance*>(treePrimitive));
+        meshesGPU.push_back(Geometry::GPU::MeshInstance(*dynamic_cast<Geometry::MeshInstance*>(treePrimitive)));
 
-    sceneUpdatedCallback();
+    sceneUpdatedCallback(false);
 
     /*   Geometry::MeshInstance* selectedMesh = nullptr;
        for (auto& mesh : meshes)
@@ -203,7 +171,7 @@ void Scene::updateBVHs()
 
 }
 
-void Scene::setSceneUpdateCallback(std::function<void()> callback)
+void Scene::setSceneUpdateCallback(std::function<void(bool)> callback)
 {
     sceneUpdatedCallback = callback;
 }

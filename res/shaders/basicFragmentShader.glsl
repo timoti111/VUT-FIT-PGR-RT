@@ -14,4 +14,5 @@ void main()
 {
     vec4 color = texture(srcTex, texCoord);
     fragColor = correctGamma(color / color.w, GAMMA);
+//    fragColor = color / color.w;
 }

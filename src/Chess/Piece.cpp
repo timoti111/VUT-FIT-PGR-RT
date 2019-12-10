@@ -5,7 +5,7 @@
 Chess::Piece::Piece(Board* board, int color, std::shared_ptr<Geometry::MeshInstance> instance) :
     board(board), color(static_cast<Color>(color)), instance(instance)
 {
-    instance->setMaterialID(color + 1);
+    instance->setMaterialID(color);
 }
 
 bool Chess::Piece::placeAt(std::string index)
@@ -20,22 +20,21 @@ bool Chess::Piece::placeAt(std::string index)
     }
     catch (const Board::SquareOccupied & e)
     {
-
     }
     return false;
 }
 
 bool Chess::Piece::drawGui()
 {
+    static const char* cols[] = { "A", "B", "C", "D", "E", "F", "G", "H" };
+    static const char* rows[] = { "1", "2", "3", "4", "5", "6", "7", "8" };
     bool ret = false;
     int rowLast = row;
     int colLast = col;
     std::string name = instance->parent->name;
     ImGui::Begin((name + " Settings").c_str());
     ImGui::Text("Board position:");
-    const char* cols[] = { "A", "B", "C", "D", "E", "F", "G", "H" };
     ImGui::Combo("Col", &col, cols, IM_ARRAYSIZE(cols));
-    const char* rows[] = { "1", "2", "3", "4", "5", "6", "7", "8" };
     ImGui::Combo("Row", &row, rows, IM_ARRAYSIZE(rows));
     if (rowLast != row || colLast != col)
     {

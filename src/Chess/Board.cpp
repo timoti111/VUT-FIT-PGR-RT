@@ -5,7 +5,7 @@
 Chess::Board::Board(std::string boardDirectory)
 {
     boardModel = Geometry::Shape::fromObjFile(boardDirectory + "Board.obj", "Board");
-    boardModel->instantiate(glm::mat4x4(1.0f), 0, true);
+    boardModel->instantiate(glm::mat4x4(1.0f), 2, true);
 
     tinyxml2::XMLDocument doc;
     doc.LoadFile((boardDirectory + "Board.xml").c_str());

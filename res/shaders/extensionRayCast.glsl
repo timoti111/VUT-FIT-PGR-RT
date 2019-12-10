@@ -3,6 +3,8 @@
 #include structuresWavefront.glsl
 #include buffersWavefront.glsl
 #include bvhTraversal.glsl
+#include utils.glsl
+
 
 layout(local_size_x = 256) in;
 
@@ -13,15 +15,9 @@ void main()
         return;
 
     uint pathIndex = extRayCastPaths[globalInvocationID];
-    Ray ray = CreateRay(pathStates[pathIndex].primOrig, pathStates[pathIndex].primDir);
-    RayHit rayHit = CreateRayHit();
-    rayHit.t = pathStates[pathIndex].t;
+    Ray ray = CreateRay(pathStates[pathIndex].orig, pathStates[pathIndex].dir);
+    RayHit rayHit = EmptyHit(pathStates[pathIndex].t);
     IntersectScene(ray, false, rayHit);
-    pathStates[pathIndex].hitPos = rayHit.position;
-    pathStates[pathIndex].hitNorm = rayHit.normal;
-    pathStates[pathIndex].hitUV = rayHit.uv;
-    pathStates[pathIndex].t = rayHit.t;
-    pathStates[pathIndex].matID = rayHit.matID;
-    pathStates[pathIndex].meshIndex = rayHit.meshIndex;
+    WriteHit(rayHit, pathIndex);
     pathStates[pathIndex].pathLen++;
 }

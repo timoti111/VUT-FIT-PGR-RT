@@ -16,8 +16,11 @@ struct alignas(16) Camera
 struct alignas(16) RenderParameters
 {
     Camera camera;
+    glm::vec4 backgroundColor;
+    float backgroundIntensity;
     int maxBounces;
     bool useEnvironmentMap;
+    bool useRussianRoulette;
 };
 
 class RenderInfo
@@ -30,9 +33,14 @@ public:
     void moveFront(float timeStep);
     void moveBack(float timeStep);
     void setFov(float fov);
+    void setBackgroundColor(glm::vec4 color);
+    void setBackgroundIntensity(float intensity);
+    void setMaxBounces(int bounces);
+    void setUseEnvironmentMap(bool useEnvironmentMap);
+    void setUseRussianRoulette(bool useRussianRoulette);
     void setAperture(float aperture);
     void setFocusDistance(float focusDistance);
-    void drawImGui();
+    void drawGui();
     int getPreviewBounces();
     void setDirection(glm::vec4 direction);
     void rotateCamera(glm::vec2 delta);

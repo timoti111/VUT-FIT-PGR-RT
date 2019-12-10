@@ -12,9 +12,9 @@ void main()
     if (globalInvocationID >= queueLengths.shadowRayCounter)
         return;
 
-    uint pathIndex = shadowRayCastPaths[globalInvocationID];
-    Ray ray = CreateRay(pathStates[pathIndex].primOrig, pathStates[pathIndex].primDir);
-    RayHit rayHit = CreateRayHit();
-    rayHit.t = pathStates[pathIndex].t;
-    pathStates[pathIndex].shadowRayBlocked = IntersectScene(ray, true, rayHit);
+//    uint pathIndex = shadowRayCastPaths[globalInvocationID];
+//    Ray ray = CreateRay(pathStates[pathIndex].primOrig, pathStates[pathIndex].primDir);
+//    RayHit rayHit = CreateRayHit();
+//    rayHit.t = pathStates[pathIndex].t;
+//    pathStates[pathIndex].shadowRayBlocked = IntersectScene(ray, true, rayHit);
 }

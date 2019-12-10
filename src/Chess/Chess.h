@@ -12,10 +12,12 @@ namespace Chess
     public:
         Chess(std::string boardDirectory , std::string setDirectory);
 
-        void drawSelectedPieceSettings();
+        void drawGui();
     private:
         Board board;
         std::map<Geometry::MeshInstance*, Piece> pieces;
+        void drawSelectedPieceSettings();
+        void drawMaterialSettings();
         int row = 0, col = 0;
     };
 }

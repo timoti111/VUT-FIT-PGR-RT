@@ -26,7 +26,7 @@ private:
     void drawGui(bool drawGui);
 
     bool drawGuiB = true;
-    bool updateParams = true;
+    bool resetRender = true;
     Chess::Chess scene;
     RenderInfo renderInfo;
     HDRLoaderResult backgroundTexture;

@@ -73,48 +73,67 @@ struct RayHit
     vec2 uv;
     float t;
     int matID;
-    int meshIndex;
-};
-
-RayHit CreateRayHit()
-{
-    RayHit hit;
-    hit.t = FLT_MAX;
-    hit.matID = -1;
-    hit.meshIndex = -1;
-    return hit;
+    int triIndex;
 };
 
 struct PathState
 {
-    vec4 primOrig;
-    vec4 primDir;
-    vec4 shadOrig;
-    vec4 shadDir;
-    vec4 color;
-    vec4 throughput;
-    vec4 lastColor;
-    vec4 lastThroughput;
-    vec4 hitPos;
-    vec4 hitNorm;
+    vec4 orig;
+    vec4 dir;
+    vec4 shadowOrig;
+    vec4 shadowDir;
+    vec4 T;
+    vec4 Ei;
+    vec4 lastBsdf;
+    vec4 lastEmission;
+    vec4 lastT;
+    vec4 hitP;
+    vec4 hitN;
+
     vec2 hitUV;
     ivec2 pixelIndex;
 
-    float t;
-    int matID;
-    int pathLen;
-    bool shadowRayBlocked;
-    float shadowRayT;
+    float lastPdfW; // prev. brdf pdf, for MIS (implicit light samples)
+    uint pathLen; // number of segments in path
     uint seed;
-    int meshIndex;
-    int pad0;
+    bool lastSpecular; // prevents NEE
+
+    bool shadowRayBlocked;
+    bool firstDiffuseHit;
+    bool backfaceHit; // for certain bsdf functions
+    // Previously evaluated light sample
+    float lastPdfDirect;    // pdfW of sampled NEE sample
+
+    float lastPdfImplicit;  // pdfW of implicit NEE sample
+    float lastCosTh;
+    float lastLightPickProb;
+    float shadowRayLen;
+
+    float t;
+    int triIndex;        // index of hit triangle, -1 by default
+    bool lightHit;
+    int matID;    // index of hit material
+
+
+
+//    float t;
+//    int matID;
+//    int pathLen;
+//    bool shadowRayBlocked;
+//    float shadowRayT;
+//    uint seed;
+//    int meshIndex;
+//    int pad0;
 };
 
 struct RenderParameters
 {
     Camera camera;
+    vec4 backgroundColor;
+    float backgroundIntensity;
     int maxBounces;
     bool useEnvironmentMap;
+    bool useRussianRoulette;
 };
 
 struct QueueLengths
@@ -123,4 +142,17 @@ struct QueueLengths
     uint extensionRayCounter;
     uint shadowRayCounter;
     uint basicMaterialCounter;
+};
+
+struct Material
+{
+    vec4 Kd;     // diffuse reflectivity
+    vec4 Ks;     // specular reflectivity 
+    vec4 Ke;     // emission
+    float Ns;   // specular exponent (shininess), normally in [0, 1000]
+    float Ni;   // index of refraction
+    int map_Kd; // diffuse texture descriptor idx
+    int map_Ks; // specular texture descriptor idx
+    int map_N;  // normal texture descriptor idx
+    int type;   // BXDF type, defined in bxdf.cl
 };

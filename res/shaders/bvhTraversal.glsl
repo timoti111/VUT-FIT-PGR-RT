@@ -9,7 +9,7 @@ bool IntersectPrimitive(Ray ray, Primitive primitive, Mesh mesh, bool occlusion,
             vec3 v0 = (mesh.objectToWorld * vertices[vIndexes.x]).xyz;
             vec3 v1 = (mesh.objectToWorld * vertices[vIndexes.y]).xyz;
             vec3 v2 = (mesh.objectToWorld * vertices[vIndexes.z]).xyz;
-            float t,u,v;
+            float t, u, v;
 
             if (IntersectTriangle(ray, v0, v1, v2, t, u, v))
             {
@@ -20,13 +20,14 @@ bool IntersectPrimitive(Ray ray, Primitive primitive, Mesh mesh, bool occlusion,
                 if (t < intersection.t)
                 {
                     intersection.t = t;
+                    intersection.position = ray.origin + t * ray.direction;
                     if (mesh.smoothing)
                     {
                         ivec3 nIndices = triangle.normals.xyz;
                         vec4 n0 = (mesh.objectToWorld * normals[nIndices.x]);
                         vec4 n1 = (mesh.objectToWorld * normals[nIndices.y]);
                         vec4 n2 = (mesh.objectToWorld * normals[nIndices.z]);
-                        intersection.normal = (1 - u - v) * n0 + u * n1 + v * n2;
+                        intersection.normal = normalize((1 - u - v) * n0 + u * n1 + v * n2);
                     }
                     else
                         intersection.normal = vec4(normalize(cross(v1 - v0, v2 - v0)), 0.0f);
@@ -36,7 +37,8 @@ bool IntersectPrimitive(Ray ray, Primitive primitive, Mesh mesh, bool occlusion,
 //                    vec4 uv2 = coords[uvIndices.z]);
 //                    intersection.uv = (1.0f - u - v) * triangles[primitive.index].v0uv + u * triangles[primitive.index].v1uv + v * triangles[primitive.index].v2uv;
                     
-                    intersection.matID = 0;
+                    intersection.matID = mesh.materialID;
+                    intersection.triIndex = primitive.index;
                     return true;
                 }
             }
@@ -48,7 +50,7 @@ bool IntersectPrimitive(Ray ray, Primitive primitive, Mesh mesh, bool occlusion,
                 // If we're only looking for occlusion, then any hit is good enough
                 if(occlusion)
                     return true;
-                intersection.matID = 0;
+                intersection.matID = mesh.materialID;
                 return true;
             }
             break;
@@ -59,7 +61,7 @@ bool IntersectPrimitive(Ray ray, Primitive primitive, Mesh mesh, bool occlusion,
                 // If we're only looking for occlusion, then any hit is good enough
                 if(occlusion)
                     return true;
-                intersection.matID = 0;
+                intersection.matID = mesh.materialID;
                 return true;
             }
             break;
@@ -99,6 +101,12 @@ bool IntersectMesh(Ray ray, Mesh mesh, bool occlusion, inout RayHit intersection
             for(int o = 0; o < node.nPrims; ++o)
             {
                 Primitive primitive = primitives[mesh.primitiveOffset + node.start + o];
+//                if (IntersectPrimitive(ray, primitive, mesh, occlusion, intersection))
+//                {
+//                    if (occlusion)
+//                        return true;
+////                     intersection.primIndex = int(mesh.primitiveOffset + node.start + o);
+//                }
                 if (IntersectPrimitive(ray, primitive, mesh, occlusion, intersection) && occlusion)
                     return true;
             }
@@ -121,11 +129,7 @@ bool IntersectMesh(Ray ray, Mesh mesh, bool occlusion, inout RayHit intersection
 
                 // ... If the right child was actually closer, swap the relavent values.
                 if(bbhitsc1.x < bbhitsc0.x)
-                {
-                    int itmp = closer;
-                    closer = other;
-                    other = itmp;
-                }
+                    swap(closer, other, int);
 
                 // It's possible that the nearest object is still in the other side, but we'll
                 // check the further-awar node later...
@@ -178,12 +182,8 @@ bool IntersectScene(Ray ray, bool occlusion, inout RayHit intersection)
             {
                 Mesh mesh = meshes[node.start + o];
 
-                if (IntersectMesh(ray, mesh, occlusion, intersection))
-                {
-                    if (occlusion)
-                        return true;
-                     intersection.meshIndex = int(node.start + o);
-                }
+                if (IntersectMesh(ray, mesh, occlusion, intersection) && occlusion)
+                    return true;
             }
         }
         else
@@ -203,11 +203,7 @@ bool IntersectScene(Ray ray, bool occlusion, inout RayHit intersection)
 
                 // ... If the right child was actually closer, swap the relavent values.
                 if(bbhitsc1.x < bbhitsc0.x)
-                {
-                    int itmp = closer;
-                    closer = other;
-                    other = itmp;
-                }
+                    swap(closer, other, int);
 
                 // It's possible that the nearest object is still in the other side, but we'll
                 // check the further-awar node later...
