@@ -73,7 +73,6 @@ struct RayHit
     float t;
     int matID;
     int triIndex;
-    bool backfaceHit;
 };
 
 struct PathState
@@ -87,32 +86,30 @@ struct PathState
     vec4 lastBsdf;
     vec4 lastEmission;
     vec4 lastT;
-    vec4 hitP;
-    vec4 hitN;
-
-    vec2 hitUV;
-    ivec2 pixelIndex;
-
-    float lastPdfW; // prev. brdf pdf, for MIS (implicit light samples)
-    uint pathLen; // number of segments in path
-    uint seed;
-    bool lastSpecular; // prevents NEE
-
     bool shadowRayBlocked;
-    bool firstDiffuseHit;
-    bool backfaceHit; // for certain bsdf functions
+    float shadowRayLen;
+    bool lastSpecular; // prevents NEE
     // Previously evaluated light sample
+    float lastPdfW; // prev. brdf pdf, for MIS (implicit light samples)
     float lastPdfDirect;    // pdfW of sampled NEE sample
-
     float lastPdfImplicit;  // pdfW of implicit NEE sample
     float lastCosTh;
     float lastLightPickProb;
-    float shadowRayLen;
+    
+    ivec2 pixelIndex;
+    uint seed;
+    bool firstDiffuseHit;
 
+
+    vec4 hitP;
+    vec4 hitN;
+    vec2 hitUV;
     float t;
-    int triIndex;        // index of hit triangle, -1 by default
-    bool lightHit;
     int matID;    // index of hit material
+    int triIndex;    
+    uint pathLen; // number of segments in path
+        // index of hit triangle, -1 by default
+    bool lightHit;
 };
 
 struct RenderParameters

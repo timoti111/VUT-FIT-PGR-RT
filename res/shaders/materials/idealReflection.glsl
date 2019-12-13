@@ -1,7 +1,7 @@
 // Ideal conductive specular reflection (mirror)
 // Check PBRT 8.2 (p.516)
 
-vec4 sampleIdealReflection(RayHit hit, Material material, bool backface, vec4 dirIn, inout vec4 dirOut, inout float pdfW, inout uint randSeed)
+vec4 sampleIdealReflection(RayHit hit, Material material, vec4 dirIn, inout vec4 dirOut, inout float pdfW, inout uint randSeed)
 {
 	dirOut = normalize(reflect(dirIn, hit.normal));
 	pdfW = 1.0f;

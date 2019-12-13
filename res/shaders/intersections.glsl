@@ -11,10 +11,7 @@ bool IntersectSphere(Ray ray, vec4 sphere, inout RayHit bestHit)
     float t1 = tca + thc; 
 
     if (t0 < 0)
-    {
         t0 = t1; // if t0 is negative, let's use t1 instead 
-        bestHit.backfaceHit = true;
-    }
  
     if (t0 > 0.0f && t0 < bestHit.t)
     {

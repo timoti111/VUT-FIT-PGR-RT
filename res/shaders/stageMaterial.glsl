@@ -18,7 +18,6 @@ void main()
     RayHit hit = ReadHit(pathIndex);
     Material mat = materials[hit.matID];
     hit.normal = getNormalFromMap(hit, mat.map_N);
-    bool backface = pathStates[pathIndex].backfaceHit;
     vec4 dirIn = pathStates[pathIndex].dir;
 //    vec4 L = pathStates[pathIndex].shadowDir;
 //
@@ -30,7 +29,7 @@ void main()
     // Generate continuation ray by sampling BSDF
     float pdfW;
     vec4 newDir;
-    vec4 bsdf = bxdfSample(hit, mat, backface, dirIn, newDir, pdfW, seed);
+    vec4 bsdf = bxdfSample(hit, mat, dirIn, newDir, pdfW, seed);
     float costh = abs(dot(hit.normal, newDir));
 	
     // Update throughput * pdf

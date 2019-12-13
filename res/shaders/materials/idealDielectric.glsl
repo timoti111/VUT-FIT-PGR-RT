@@ -19,7 +19,7 @@ float fresnelDielectric(float cosThI, float etaI, float etaT)
 	return 0.5f * (parl * parl + perp * perp);
 }
 
-vec4 sampleIdealDielectric(RayHit hit, Material material, bool backface, vec4 dirIn, inout vec4 dirOut, inout float pdfW, inout uint randSeed)
+vec4 sampleIdealDielectric(RayHit hit, Material material, vec4 dirIn, inout vec4 dirOut, inout float pdfW, inout uint randSeed)
 {
     vec4 bsdf = vec4(1.0f);
 

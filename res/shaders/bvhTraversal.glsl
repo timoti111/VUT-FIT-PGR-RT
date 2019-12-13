@@ -19,21 +19,20 @@ bool IntersectPrimitive(Ray ray, Primitive primitive, Mesh mesh, bool occlusion,
                 {
                     intersection.t = t;
                     intersection.matID = mesh.materialID;
-//                    if (mesh.smoothing)
-//                    {
-//                        vec4 n0 = (mesh.objectToWorld * vec4(triangles[primitive.index].normals[0], 0.0f));
-//                        vec4 n1 = (mesh.objectToWorld * vec4(triangles[primitive.index].normals[1], 0.0f));
-//                        vec4 n2 = (mesh.objectToWorld * vec4(triangles[primitive.index].normals[2], 0.0f));
-//                        intersection.normal = (1 - u - v) * n0 + u * n1 + v * n2;
-//                    }
-//                    else
+                    intersection.triIndex = primitive.index;
+                    if (mesh.smoothing)
+                    {
+                        vec4 n0 = mesh.objectToWorld * triangles[primitive.index].normals[0];
+                        vec4 n1 = mesh.objectToWorld * triangles[primitive.index].normals[1];
+                        vec4 n2 = mesh.objectToWorld * triangles[primitive.index].normals[2];
+                        intersection.normal = (1 - u - v) * n0 + u * n1 + v * n2;
+                    }
+                    else
                         intersection.normal = vec4(cross(v1 - v0, v2 - v0), 0.0f);
                     vec2 uv0 = triangles[primitive.index].coords[0];
                     vec2 uv1 = triangles[primitive.index].coords[1];
                     vec2 uv2 = triangles[primitive.index].coords[2];
                     intersection.uv = (1.0f - u - v) * uv0 + u * uv1 + v * uv2;
-                    
-                    intersection.triIndex = primitive.index;
                     return true;
                 }
             }

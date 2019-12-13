@@ -35,7 +35,6 @@ void main()
     pathStates[pathIndex].lastCosTh = 0.0f;
     pathStates[pathIndex].lastLightPickProb = 1.0f;
     pathStates[pathIndex].shadowRayLen = FLT_MAX;
-    pathStates[pathIndex].backfaceHit = false;
     pathStates[pathIndex].shadowRayBlocked = true;
     pathStates[pathIndex].lightHit = false;
     pathStates[pathIndex].lastEmission = zeroVec;

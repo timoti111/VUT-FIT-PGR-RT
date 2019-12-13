@@ -10,7 +10,6 @@
 vec4 bxdfSample(
     RayHit hit,
     Material material,
-    bool backface, // indicates that normal has been flipped (affects refraction)
     vec4 dirIn,
     inout vec4 dirOut,
     inout float pdfW,
@@ -21,9 +20,9 @@ vec4 bxdfSample(
         case BXDF_DIFFUSE:
             return sampleDiffuse(hit, material, dirOut, pdfW, randSeed);
         case BXDF_IDEAL_REFLECTION:
-            return sampleIdealReflection(hit, material, backface, dirIn, dirOut, pdfW, randSeed);
-		case BXDF_IDEAL_DIELECTRIC:
-			return sampleIdealDielectric(hit, material, backface, dirIn, dirOut, pdfW, randSeed);
+            return sampleIdealReflection(hit, material, dirIn, dirOut, pdfW, randSeed);
+        case BXDF_IDEAL_DIELECTRIC:
+            return sampleIdealDielectric(hit, material, dirIn, dirOut, pdfW, randSeed);
         case BXDF_EMISSIVE:
             return sampleEmissive(hit, material, dirOut, pdfW);
     }
@@ -35,7 +34,6 @@ vec4 bxdfSample(
 vec4 bxdfEval(
 	RayHit hit,
 	Material material,
-	bool backface,
 	vec4 dirIn,
 	vec4 dirOut)
 {
@@ -58,7 +56,6 @@ vec4 bxdfEval(
 float bxdfPdf(
 	RayHit hit,
 	Material material,
-	bool backface,
 	vec4 dirIn,
 	vec4 dirOut)
 {

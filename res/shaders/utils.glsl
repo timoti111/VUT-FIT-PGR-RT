@@ -88,7 +88,6 @@ RayHit EmptyHit(float t)
     hit.t = t;
     hit.matID = -1;
     hit.triIndex = -1;
-    hit.backfaceHit = false;
     return hit;
 };
 
@@ -101,7 +100,6 @@ RayHit ReadHit(uint pathIndex)
     hit.t = pathStates[pathIndex].t;
     hit.matID = pathStates[pathIndex].matID;
     hit.triIndex = pathStates[pathIndex].triIndex;
-    hit.backfaceHit = pathStates[pathIndex].backfaceHit;
     return hit;
 };
 
@@ -113,7 +111,6 @@ void WriteHit(RayHit hit, uint pathIndex)
     pathStates[pathIndex].t = hit.t;
     pathStates[pathIndex].matID = hit.matID;
     pathStates[pathIndex].triIndex = hit.triIndex;
-    pathStates[pathIndex].backfaceHit = hit.backfaceHit;
 };
 
 
