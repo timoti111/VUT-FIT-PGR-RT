@@ -20,15 +20,15 @@ bool IntersectPrimitive(Ray ray, Primitive primitive, Mesh mesh, bool occlusion,
                 if (t < intersection.t)
                 {
                     intersection.t = t;
-                    if (mesh.smoothing)
-                    {
-                        ivec3 nIndices = triangle.normals.xyz;
-                        vec4 n0 = (mesh.objectToWorld * normals[nIndices.x]);
-                        vec4 n1 = (mesh.objectToWorld * normals[nIndices.y]);
-                        vec4 n2 = (mesh.objectToWorld * normals[nIndices.z]);
-                        intersection.normal = (1 - u - v) * n0 + u * n1 + v * n2;
-                    }
-                    else
+//                    if (mesh.smoothing)
+//                    {
+//                        ivec3 nIndices = triangle.normals.xyz;
+//                        vec4 n0 = (mesh.objectToWorld * normals[nIndices.x]);
+//                        vec4 n1 = (mesh.objectToWorld * normals[nIndices.y]);
+//                        vec4 n2 = (mesh.objectToWorld * normals[nIndices.z]);
+//                        intersection.normal = (1 - u - v) * n0 + u * n1 + v * n2;
+//                    }
+//                    else
                         intersection.normal = vec4(cross(v1 - v0, v2 - v0), 0.0f);
                     ivec3 uvIndices = triangle.coords.xyz;
                     vec2 uv0 = coords[uvIndices.x];

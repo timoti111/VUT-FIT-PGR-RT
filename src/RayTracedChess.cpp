@@ -56,7 +56,8 @@ RayTracedChess::RayTracedChess() : Application(), scene("res/models/chess/board2
 
     initComputeShaderImage();
 
-    //scene.addShape(Geometry::Shape::fromObjFile("res/models/dragon/dragon2.obj", "Dragon"));
+    //scene.addShape(Geometry::Shape::fromObjFile("res/models/cryteksponza/sponza.obj", "Sponza"));
+    //scene.instantiateShape("Sponza");
     //int materialID;
     //auto dragonMaterial = Material::generateNewMaterial(materialID);
     //scene.drawableMaterials.emplace(std::make_pair(std::string("Dragon"), materialID));
@@ -64,7 +65,7 @@ RayTracedChess::RayTracedChess() : Application(), scene("res/models/chess/board2
     //Material::generateNewMaterial(materialID);
     //scene.addShape(Geometry::Shape::fromObjFile("res/models/chess/board2/Board.obj", "Board"));
     //scene.instantiateShape("Board", materialID);
-    std::cout << logicProgram->getUniformLocation("destTex") << std::endl;
+    //std::cout << logicProgram->getUniformLocation("destTex") << std::endl;
 
     vars.reCreate<ge::gl::Buffer>("pathsDataBuffer", (4 + 1 + 4 * pathAlive + 64 * pathAlive) * sizeof(unsigned))->bindBase(GL_SHADER_STORAGE_BUFFER, logicProgram->getBufferBinding("PathsDataBuffer"));
     vars.reCreate<ge::gl::Buffer>("renderParamsBuffer", sizeof(RenderParameters))->bindBase(GL_UNIFORM_BUFFER, 0);

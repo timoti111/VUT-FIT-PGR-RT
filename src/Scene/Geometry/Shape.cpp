@@ -63,7 +63,7 @@ std::shared_ptr<Geometry::Shape> Geometry::Shape::fromObjFile(std::string path, 
             texture->texParameteri(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             newMaterial->map_N = Textures::addTexture(texture);
         }
-        newMaterial->type = IDEAL_REFLECTION;
+        //newMaterial->type = IDEAL_REFLECTION;
         //newMaterial.map_Kd = generateTexture(dir + material.diffuse_texname);
         //newMaterial.map_N = generateTexture(dir + material.diffuse_texname);
         //shapeInternal->materials.push_back(newMaterial);
