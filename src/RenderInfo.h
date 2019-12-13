@@ -19,8 +19,9 @@ struct alignas(16) RenderParameters
     glm::vec4 backgroundColor;
     float backgroundIntensity;
     int maxBounces;
-    bool useEnvironmentMap;
-    bool useRussianRoulette;
+    unsigned useEnvironmentMap;
+    unsigned useRussianRoulette;
+    unsigned environmentMapTextureID;
 };
 
 class RenderInfo
@@ -42,14 +43,12 @@ public:
     void setFocusDistance(float focusDistance);
     void drawGui();
     int getPreviewBounces();
-    void setDirection(glm::vec4 direction);
     void rotateCamera(glm::vec2 delta);
     void setParamsUpdatedCallback(std::function<void()> callback);
     RenderParameters renderParams;
 
 private:
     std::function<void()> paramsUpdatedCallback = [](){};
-    glm::vec4 acceleration;
     glm::vec2 rotation;
     float fov;
     float speed = 1.0f;

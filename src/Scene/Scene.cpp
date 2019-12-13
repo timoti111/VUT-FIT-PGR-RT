@@ -1,23 +1,30 @@
 #include "Scene.h"
 #include <random>
 #include <glm/gtx/norm.hpp>
+#include "imgui.h"
 
 Scene::Scene() : BVH(4)
-{}
+{
+    
+    auto selectedPieceMaterial = Material::generateNewMaterial(selectedObjectMaterial);
+    selectedPieceMaterial->Ke = glm::vec4(0.0f, 0.5f, 1.0f, 0.0f);
+    selectedPieceMaterial->type = EMISSIVE;
+    drawableMaterials.emplace(std::make_pair(std::string("Selection Box Material"), selectedObjectMaterial));
+}
 
 void Scene::addShape(std::shared_ptr<Geometry::Shape> shape)
 {
     shapes.push_back(shape);
 }
 
-void Scene::instantiateShape(std::string name, glm::mat4x4 objToWorld, int materialID, bool smoothing)
+void Scene::instantiateShape(std::string name, int materialID, bool smoothing, glm::mat4x4 objToWorld)
 {
     bool found = false;
     for (int i = 0; i < shapes.size(); i++)
     {
         if (shapes[i]->name == name)
         {
-            shapes[i]->instantiate(objToWorld, materialID, smoothing);
+            shapes[i]->instantiate(objToWorld, smoothing, materialID);
             found = true;
             break;
         }
@@ -75,7 +82,7 @@ void Scene::updateBVHs()
         if (actualSelectedMesh != nullptr)
         {
             createSelectedObjectShape();
-            instantiateShape("SelectedObject", glm::mat4x4(1.0f), 3);
+            instantiateShape("SelectedObject", selectedObjectMaterial);
         }
         updateSelectedMesh = false;
     }
@@ -174,6 +181,22 @@ void Scene::updateBVHs()
 void Scene::setSceneUpdateCallback(std::function<void(bool)> callback)
 {
     sceneUpdatedCallback = callback;
+}
+
+void Scene::drawMaterialSettings()
+{
+    bool changed = false;
+    ImGui::Begin("Material settings");
+    for (auto material : drawableMaterials)
+    {
+        if (ImGui::CollapsingHeader(material.first.c_str()))
+        {
+            changed |= Material::getMaterials().at(material.second).drawGUI();
+        }
+    }
+    ImGui::End();
+    if (changed)
+        sceneUpdatedCallback(true);
 }
 
 void Scene::createSelectedObjectShape()

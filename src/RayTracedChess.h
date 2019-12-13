@@ -23,20 +23,27 @@ private:
 
     void checkKeys();
     void initComputeShaderImage();
+    void saveRenderToFile();
     void drawGui(bool drawGui);
 
     bool drawGuiB = true;
     bool resetRender = true;
     Chess::Chess scene;
+    //Scene scene;
     RenderInfo renderInfo;
     HDRLoaderResult backgroundTexture;
     double firstMouse = true;
-    const int pathAlive = 2 << 19;
+    const int pathAlive = 1 << 19;
+    GLint workGroupSizeRes[3];
     std::unique_ptr<ge::gl::Program> resetProgram;
+    GLint workGroupSizeLog[3];
     std::unique_ptr<ge::gl::Program> logicProgram;
+    GLint workGroupSizeNew[3];
     std::unique_ptr<ge::gl::Program> newPathProgram;
+    GLint workGroupSizeMat[3];
+    std::unique_ptr<ge::gl::Program> basicMaterialProgram;
+    GLint workGroupSizeExt[3];
     std::unique_ptr<ge::gl::Program> extRayProgram;
     std::unique_ptr<ge::gl::Program> shadRayProgram;
-    std::unique_ptr<ge::gl::Program> basicMaterialProgram;
     std::unique_ptr<ge::gl::Program> basicDrawProgram;
 };

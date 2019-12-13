@@ -11,6 +11,9 @@ Material::Material()
     Ke = glm::vec4(0.5f);
     Ns = 1.0f;
     Ni = 1.52f;
+    map_Kd = -1;
+    map_Ks = -1;
+    map_N = -1;
     type = DIFFUSE;
 }
 
@@ -50,4 +53,17 @@ int Material::valueToIndex(int value)
         if (values[i] == value)
             return i;
     return 0;
+}
+
+static std::vector<Material> materials;
+Material* Material::generateNewMaterial(int& newIndex)
+{
+    newIndex = materials.size();
+    materials.push_back(Material());
+    return materials.data() + newIndex;
+}
+
+std::vector<Material>& Material::getMaterials()
+{
+    return materials;
 }

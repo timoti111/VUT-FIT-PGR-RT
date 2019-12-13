@@ -4,23 +4,26 @@ layout(binding = 0) uniform RenderParametersBuffer
     RenderParameters renderParameters;
 };
 layout(rgba32f, binding = 1) uniform image2D destTex;
-layout(binding = 2) uniform sampler2D hdriTexture;
+layout(binding = 2) uniform sampler2D textures[20];
+//layout(binding = 2) uniform sampler2D hdriTexture[5];
 
-// BUFFERS
-layout(std430, binding = 0) buffer QueueLengthsBuffer
+#define NEW_PATH_QUEUE 0
+#define MATERIAL_QUEUE 1
+#define EXTENSION_RAY_QUEUE 2
+#define SHADOW_RAY_QUEUE 3
+layout(binding = 0) buffer PathsDataBuffer
 {
-    QueueLengths queueLengths;
-};
-layout(std430, binding = 1) buffer PathStatesBuffer
-{
+    uint queueCounters[4];
+    uint currentPixelCount;
+    uint newPathQueue[NUM_PATHS];
+    uint materialQueue[NUM_PATHS];
+    uint extensionRayQueue[NUM_PATHS];
+    uint shadowRayQueue[NUM_PATHS];
     PathState pathStates[];
 };
-layout(std430, binding = 2) buffer NewPathBuffer
+layout(std430, binding = 1) buffer MaterialsBuffer
 {
-    uint newPathIndices[NUM_PATHS];
-    uint extRayCastPaths[NUM_PATHS];
-    uint shadowRayCastPaths[NUM_PATHS];
-    uint basicMaterialPaths[NUM_PATHS];
+    Material materials[];
 };
 layout(std430, binding = 3) buffer SceneBVHBuffer
 {
@@ -61,8 +64,4 @@ layout(std430, binding = 11) buffer SpheresBuffer
 layout(std430, binding = 12) buffer CylindersBuffer
 {
     Cylinder cylinders[];
-};
-layout(std430, binding = 13) buffer MaterialsBuffer
-{
-    Material materials[];
 };

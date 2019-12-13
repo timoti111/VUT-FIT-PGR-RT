@@ -11,13 +11,16 @@ bool IntersectSphere(Ray ray, vec4 sphere, inout RayHit bestHit)
     float t1 = tca + thc; 
 
     if (t0 < 0)
+    {
         t0 = t1; // if t0 is negative, let's use t1 instead 
+        bestHit.backfaceHit = true;
+    }
  
     if (t0 > 0.0f && t0 < bestHit.t)
     {
         bestHit.t = t0;
         bestHit.position = ray.origin + t0 * ray.direction;
-        bestHit.normal = normalize(bestHit.position - vec4(sphere.xyz, 1.0f));
+        bestHit.normal = bestHit.position - vec4(sphere.xyz, 1.0f);
         return true;
     }
     return false;
@@ -56,7 +59,7 @@ bool IntersectCylinder(Ray ray, vec3 A, vec3 B, float R, inout RayHit bestHit)
     {
         bestHit.t = t0;
         bestHit.position = ray.origin + t0 * ray.direction;
-        bestHit.normal = normalize(bestHit.position - vec4(A, 1.0f) - s * vec4(V, 0.0f));
+        bestHit.normal = bestHit.position - vec4(A, 1.0f) - s * vec4(V, 0.0f);
         return true;
     }
     return false;
@@ -90,26 +93,6 @@ bool IntersectSelectedObject(Ray ray, vec4 minBound, vec4 maxBound, float radius
     return true;
 }
 
-vec3 minVec3(vec3 a, vec3 b)
-{
-    return vec3(min(a.x, b.x), min(a.y, b.y), min(a.z, b.z));
-}
-
-vec3 maxVec3(vec3 a, vec3 b)
-{
-    return vec3(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z));
-}
-
-float min3(vec3 v)
-{
-    return min(min(v.x, v.y), v.z);
-}
-
-float max3(vec3 v)
-{
-    return max(max(v.x, v.y), v.z);
-}
-
 bool IntersectAABB(Ray ray, vec4 minBound, vec4 maxBound, out vec2 nearFar, float maxT)
 {
     vec3 invDir = 1.0f / ray.direction.xyz;
@@ -141,7 +124,7 @@ bool IntersectTriangle(Ray ray, vec3 vert0, vec3 vert1, vec3 vert2,
     // if determinant is near zero, ray lies in plane of triangle
     float det = dot(edge1, pvec);
     // use backface culling
-    if (det < EPSILON)
+    if (abs(det) < EPSILON)
         return false;
     float inv_det = 1.0f / det;
     // calculate distance from vert0 to ray origin
@@ -158,5 +141,5 @@ bool IntersectTriangle(Ray ray, vec3 vert0, vec3 vert1, vec3 vert2,
         return false;
     // calculate t, ray intersects triangle
     t = dot(edge2, qvec) * inv_det;
-    return true;
+    return t >= 0.0f;
 }

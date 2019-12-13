@@ -17,7 +17,6 @@ namespace Chess
         Board board;
         std::map<Geometry::MeshInstance*, Piece> pieces;
         void drawSelectedPieceSettings();
-        void drawMaterialSettings();
         int row = 0, col = 0;
     };
 }

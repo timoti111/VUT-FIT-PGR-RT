@@ -5,7 +5,11 @@
 Chess::Board::Board(std::string boardDirectory)
 {
     boardModel = Geometry::Shape::fromObjFile(boardDirectory + "Board.obj", "Board");
-    boardModel->instantiate(glm::mat4x4(1.0f), 2, true);
+
+    //auto material = Material::generateNewMaterial(boardMaterial);
+    //material->Kd = glm::vec4(0.5f);
+    //material->type = DIFFUSE;
+    boardModel->instantiate(glm::mat4x4(1.0f), true);
 
     tinyxml2::XMLDocument doc;
     doc.LoadFile((boardDirectory + "Board.xml").c_str());
@@ -60,6 +64,11 @@ std::shared_ptr<Geometry::Shape> Chess::Board::getBoardModel()
 void Chess::Board::setAllowOverlapping(bool enabled)
 {
     overlapping = enabled;
+}
+
+int Chess::Board::getMaterial()
+{
+    return boardMaterial;
 }
 
 std::string Chess::Board::indexToString(int col, int row)

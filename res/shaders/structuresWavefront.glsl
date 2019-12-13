@@ -74,6 +74,7 @@ struct RayHit
     float t;
     int matID;
     int triIndex;
+    bool backfaceHit;
 };
 
 struct PathState
@@ -134,14 +135,15 @@ struct RenderParameters
     int maxBounces;
     bool useEnvironmentMap;
     bool useRussianRoulette;
+    uint environmentMapTextureID;
 };
 
 struct QueueLengths
 {
-    uint newPathCounter;
-    uint extensionRayCounter;
-    uint shadowRayCounter;
-    uint basicMaterialCounter;
+    uint newPathQueueLen;
+    uint materialQueueLen;
+    uint extensionRayQueueLen;
+    uint shadowRayQueueLen;
 };
 
 struct Material

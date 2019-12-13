@@ -15,6 +15,7 @@ namespace Chess
         void free(std::string index);
         std::shared_ptr<Geometry::Shape> getBoardModel();
         void setAllowOverlapping(bool enabled);
+        int getMaterial();
 
         struct SquareOccupied : public std::exception
         {
@@ -32,6 +33,7 @@ namespace Chess
         glm::vec3 h8Position;
         std::shared_ptr<Geometry::Shape> boardModel;
         std::map<std::string, std::pair<Piece*, glm::vec3>> boardIndexPositions;
+        int boardMaterial;
         float piecesScale;
     };
 }

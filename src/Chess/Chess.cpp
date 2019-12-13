@@ -8,6 +8,7 @@ Chess::Chess::Chess(std::string boardDirectory, std::string setDirectory) :
     board(boardDirectory)
 {
     addShape(board.getBoardModel());
+    //drawableMaterials.emplace(std::make_pair(std::string("Board Material"), board.getMaterial()));
     auto bishop = Geometry::Shape::fromObjFile(setDirectory + "Bishop.obj", "Bishop");
     auto king = Geometry::Shape::fromObjFile(setDirectory + "King.obj", "King");
     auto knight = Geometry::Shape::fromObjFile(setDirectory + "Knight.obj", "Knight");
@@ -31,73 +32,66 @@ Chess::Chess::Chess(std::string boardDirectory, std::string setDirectory) :
     std::string queenIndices[] = { "D1", "D8" };
     std::string rookIndices[] = { "A1", "H1", "A8", "H8" };
 
-    auto ident = glm::mat4x4(1.0);
     for (int color = 0; color < 2; color++)
     {
+        int materialID;
+        if (color == 0)
+        {
+            auto blackPiecesMaterial = Material::generateNewMaterial(materialID);
+            blackPiecesMaterial->Kd = glm::vec4(0.1f);
+            blackPiecesMaterial->type = DIFFUSE;
+            drawableMaterials.emplace(std::make_pair(std::string("Black Pieces Material"), materialID));
+        }
+        else
+        {
+            auto whitePiecesMaterial = Material::generateNewMaterial(materialID);
+            whitePiecesMaterial->Kd = glm::vec4(0.9f);
+            whitePiecesMaterial->type = DIFFUSE;
+            drawableMaterials.emplace(std::make_pair(std::string("White Pieces Material"), materialID));
+        }
         for (int i = 0; i < 2; i++)
         {
-            instantiateShape("Bishop", ident, 0, true);
+            instantiateShape("Bishop", 0, true);
             auto instance = bishop->meshes[0].instances.back();
-            pieces.emplace(std::make_pair(instance.get(), Piece(&board, color, instance)));
+            pieces.emplace(std::make_pair(instance.get(), Piece(&board, materialID, instance)));
             pieces.at(instance.get()).placeAt(bishopIndices[i + color * 2]);
         }
         for (int i = 0; i < 1; i++)
         {
-            instantiateShape("King", ident, 0, true);
+            instantiateShape("King", 0, true);
             auto instance = king->meshes[0].instances.back();
-            pieces.emplace(std::make_pair(instance.get(), Piece(&board, color, instance)));
+            pieces.emplace(std::make_pair(instance.get(), Piece(&board, materialID, instance)));
             pieces.at(instance.get()).placeAt(kingIndices[i + color * 1]);
         }
         for (int i = 0; i < 2; i++)
         {
-            instantiateShape("Knight", ident, 0, true);
+            instantiateShape("Knight", 0, true);
             auto instance = knight->meshes[0].instances.back();
-            pieces.emplace(std::make_pair(instance.get(), Piece(&board, color, instance)));
+            pieces.emplace(std::make_pair(instance.get(), Piece(&board, materialID, instance)));
             pieces.at(instance.get()).placeAt(knightIndices[i + color * 2]);
         }
         for (int i = 0; i < 8; i++)
         {
-            instantiateShape("Pawn", ident, 0, true);
+            instantiateShape("Pawn", 0, true);
             auto instance = pawn->meshes[0].instances.back();
-            pieces.emplace(std::make_pair(instance.get(), Piece(&board, color, instance)));
+            pieces.emplace(std::make_pair(instance.get(), Piece(&board, materialID, instance)));
             pieces.at(instance.get()).placeAt(pawnIndices[i + color * 8]);
         }
         for (int i = 0; i < 1; i++)
         {
-            instantiateShape("Queen", ident, 0, true);
+            instantiateShape("Queen", 0, true);
             auto instance = queen->meshes[0].instances.back();
-            pieces.emplace(std::make_pair(instance.get(), Piece(&board, color, instance)));
+            pieces.emplace(std::make_pair(instance.get(), Piece(&board, materialID, instance)));
             pieces.at(instance.get()).placeAt(queenIndices[i + color * 1]);
         }
         for (int i = 0; i < 2; i++)
         {
-            instantiateShape("Rook", ident, 0, true);
+            instantiateShape("Rook", 0, true);
             auto instance = rook->meshes[0].instances.back();
-            pieces.emplace(std::make_pair(instance.get(), Piece(&board, color, instance)));
+            pieces.emplace(std::make_pair(instance.get(), Piece(&board, materialID, instance)));
             pieces.at(instance.get()).placeAt(rookIndices[i + color * 2]);
         }
     }
-
-    Material blackPiecesMaterial;
-    blackPiecesMaterial.Kd = glm::vec4(0.1f);
-    blackPiecesMaterial.type = DIFFUSE;
-    materials.push_back(blackPiecesMaterial);
-
-    Material whitePiecesMaterial;
-    whitePiecesMaterial.Kd = glm::vec4(0.9f);
-    whitePiecesMaterial.type = DIFFUSE;
-    materials.push_back(whitePiecesMaterial);
-
-    Material boardMaterial;
-    boardMaterial.Kd = glm::vec4(0.5f);
-    boardMaterial.type = DIFFUSE;
-    materials.push_back(boardMaterial);
-
-    Material selectedPieceMaterial;
-    selectedPieceMaterial.Ke = glm::vec4(0.0f, 0.5f, 1.0f, 0.0f);
-    selectedPieceMaterial.type = EMISSIVE;
-    materials.push_back(selectedPieceMaterial);
-
     updateSceneBVH = true;
 }
 
@@ -114,29 +108,6 @@ void Chess::Chess::drawSelectedPieceSettings()
         updateSelectedMesh = true;
         updateBVHs();
     }
-}
-
-void Chess::Chess::drawMaterialSettings()
-{
-    static std::vector<std::string> materialNames = {
-        "Black pieces material",
-        "White pieces material",
-        "Board material",
-        "Selection box material"
-    };
-
-    bool changed = false;
-    ImGui::Begin("Material settings");
-    for (int i = 0; i < materials.size(); i++)
-    {
-        if (ImGui::CollapsingHeader(materialNames[i].c_str()))
-        {
-            changed |= materials[i].drawGUI();
-        }
-    }
-    ImGui::End();
-    if (changed)
-        sceneUpdatedCallback(true);
 }
 
 void Chess::Chess::drawGui()

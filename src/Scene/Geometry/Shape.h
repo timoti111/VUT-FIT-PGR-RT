@@ -7,6 +7,7 @@
 #include <glm/mat4x4.hpp>
 #include <functional>
 #include "Geometry.h"
+#include "Material.h"
 
 namespace Geometry
 {
@@ -28,8 +29,9 @@ namespace Geometry
 
         std::vector<std::shared_ptr<Geometry::MeshInstance>> instances;
         void instanceChanged();
-        std::shared_ptr<Geometry::MeshInstance> instantiate(glm::mat4x4 objectToWorld, int materialID, bool smoothing);
+        std::shared_ptr<Geometry::MeshInstance> instantiate(glm::mat4x4 objectToWorld, bool smoothing = false, int materialID = -1);
         std::shared_ptr<Shape> parent;
+        int materialID = -1;
     };
 
     struct Shape
@@ -37,8 +39,10 @@ namespace Geometry
         std::string name;
         Attributes attributes;
         std::vector<Mesh> meshes;
+        std::vector<Material> materials;
+        std::vector<int> materialIDs;
         void meshChanged();
-        void instantiate(glm::mat4x4 objectToWorld, int materialID, bool smoothing);
+        void instantiate(glm::mat4x4 objectToWorld, bool smoothing = false, int materialID = -1);
 
         static std::shared_ptr<Shape> fromObjFile(std::string path, std::string name);
     };

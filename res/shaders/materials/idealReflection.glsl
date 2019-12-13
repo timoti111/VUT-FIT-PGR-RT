@@ -3,17 +3,16 @@
 
 vec4 sampleIdealReflection(RayHit hit, Material material, bool backface, vec4 dirIn, inout vec4 dirOut, inout float pdfW, inout uint randSeed)
 {
-	float len = length(dirIn);
-	dirOut = len * reflect(normalize(dirIn), hit.normal);
+	dirOut = normalize(reflect(dirIn, hit.normal));
 	pdfW = 1.0f;
 
 	// Fresnel ignored in ideal spacular case
 
 	// PBRT eq. 8.8
 	// cosTh of geometry term needs to be cancelled out
+	vec4 Ks = readMaterial(material.Ks, hit.uv, material.map_Ks);
 //	float3 ks = matGetFloat3(material->Ks, hit->uvTex, material->map_Ks, textures, texData);
-	vec4 Ks = material.Ks;
-	float cosO = dot(normalize(dirOut), hit.normal);
+	float cosO = dot(dirOut, hit.normal);
 	return (cosO != 0.0f) ? Ks / cosO : vec4(0.0f);
 }
 

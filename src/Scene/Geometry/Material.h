@@ -1,5 +1,6 @@
 #pragma once
 #include <glm/vec4.hpp>
+#include <vector>
 
 struct alignas(16) Material
 {
@@ -17,6 +18,8 @@ struct alignas(16) Material
     bool drawGUI();
     int indexToValue(int index);
     int valueToIndex(int value);
+    static Material* generateNewMaterial(int& newIndex);
+    static std::vector<Material>& getMaterials();
 };
 
 enum MaterialType

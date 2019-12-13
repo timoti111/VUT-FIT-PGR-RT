@@ -20,12 +20,16 @@ file(GLOB_RECURSE RayTracedChess_SRC
 )
 
 file(GLOB ImGUI_SRC
+    "libs/LodePGN/lodepng.h"
+    "libs/LodePGN/lodepng.cpp"
     "libs/imgui/*.h"
     "libs/imgui/*.cpp"
     "libs/imgui/examples/imgui_impl_glfw.cpp"
     "libs/imgui/examples/imgui_impl_glfw.h"
     "libs/imgui/examples/imgui_impl_opengl3.cpp"
     "libs/imgui/examples/imgui_impl_opengl3.h"
+    "libs/imgui/misc/cpp/imgui_stdlib.cpp"
+    "libs/imgui/misc/cpp/imgui_stdlib.h"
 )
 
 if(MSVC)
@@ -52,6 +56,7 @@ add_executable (${PROJECT_NAME} ${RayTracedChess_SRC} ${ImGUI_SRC})
 target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>)
 target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libs/glm>)
 target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libs/imgui>)
+target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libs/LodePGN>)
 
 
 target_link_libraries(${PROJECT_NAME} geGL::geGL Vars::Vars glfw ${OPENGL_gl_LIBRARY})

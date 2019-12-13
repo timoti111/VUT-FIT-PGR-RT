@@ -9,6 +9,7 @@
 #include <functional>
 #include "Geometry/Shape.h"
 #include "Geometry/Material.h"
+#include <utility>
 
 const float kInfinity = std::numeric_limits<float>::max();
 
@@ -18,14 +19,16 @@ public:
     Scene();
 
     void addShape(std::shared_ptr<Geometry::Shape> shape);
-    void instantiateShape(std::string name, glm::mat4x4 objToWorld = glm::mat4x4(1.0f), int materialID = -1, bool smoothing = true);
+    void instantiateShape(std::string name, int materialID = -1, bool smoothing = true, glm::mat4x4 objToWorld = glm::mat4x4(1.0f));
     void removeShape(std::string name);
     void selectMesh(Ray& ray);
     void setUpdateSceneBVH();
     void updateBVHs();
     void setSceneUpdateCallback(std::function<void(bool)> callback);
+    void drawMaterialSettings();
 
 
+    std::map<std::string, int> drawableMaterials;
     // All these vectors will be sent to GPU
     std::vector<Geometry::GPU::MeshInstance> meshesGPU;
     std::vector<Geometry::GPU::Primitive> primitivesGPU;
@@ -41,7 +44,6 @@ public:
 
     std::vector<BVHFlatNode> meshBVHs;
 
-    std::vector<Material> materials;
 private:
     std::vector<std::shared_ptr<Geometry::Shape>> shapes;
     void createSelectedObjectShape();
@@ -51,4 +53,5 @@ protected:
     bool updateSceneBVH = false;
     bool updateSelectedMesh = false;
     Geometry::MeshInstance* actualSelectedMesh = nullptr;
+    int selectedObjectMaterial;
 };
