@@ -72,37 +72,26 @@ std::shared_ptr<Geometry::Shape> Geometry::Shape::fromObjFile(std::string path, 
     shapeInternal->name = name;
     for (auto& shape : shapes)
     {
-        //if (shape.name.empty())
-        //    throw std::runtime_error("Unnamed object in file: " + path);
-
         Mesh mesh(shapeInternal);
         mesh.name = shape.name.empty() ? "Unnamed" : shape.name;
         mesh.materialID = shape.mesh.material_ids.front() + materialIDOffset;
         for (size_t i = 0; i < shape.mesh.indices.size(); i += 3)
         {
-            mesh.triangles.push_back(Geometry::Triangle(
-                glm::ivec4(glm::ivec3(shape.mesh.indices[i].vertex_index, shape.mesh.indices[i + 1].vertex_index, shape.mesh.indices[i + 2].vertex_index), 0),
-                glm::ivec4(glm::ivec3(shape.mesh.indices[i].normal_index, shape.mesh.indices[i + 1].normal_index, shape.mesh.indices[i + 2].normal_index), 0),
-                glm::ivec4(glm::ivec3(shape.mesh.indices[i].texcoord_index, shape.mesh.indices[i + 1].texcoord_index, shape.mesh.indices[i + 2].texcoord_index), 0)
-            )
-            );
+            Geometry::Triangle triangle;
+            auto vIndices = glm::ivec3(shape.mesh.indices[i].vertex_index, shape.mesh.indices[i + 1].vertex_index, shape.mesh.indices[i + 2].vertex_index) * 3;
+            auto nIndices = glm::ivec3(shape.mesh.indices[i].normal_index, shape.mesh.indices[i + 1].normal_index, shape.mesh.indices[i + 2].normal_index) * 3;
+            auto cIndices = glm::ivec3(shape.mesh.indices[i].texcoord_index, shape.mesh.indices[i + 1].texcoord_index, shape.mesh.indices[i + 2].texcoord_index) * 2;
+            for (int j = 0; j < 3; j++)
+            {
+                triangle.vertices[j] = glm::vec4(attrib.vertices[vIndices[j]], attrib.vertices[vIndices[j] + 1], attrib.vertices[vIndices[j] + 2], 1.0f);
+                if (nIndices.x >= 0)
+                    triangle.normals[j] = glm::vec4(attrib.normals[nIndices[j]], attrib.normals[nIndices[j] + 1], attrib.normals[nIndices[j] + 2], 0.0f);
+                if (cIndices.x >= 0)
+                    triangle.coords[j] = glm::vec2(attrib.texcoords[cIndices[j]], attrib.texcoords[cIndices[j] + 1]);
+            }
+            mesh.triangles.push_back(triangle);
         }
         shapeInternal->meshes.push_back(mesh);
-    }
-
-    for (size_t i = 0; i < attrib.vertices.size(); i += 3)
-    {
-        shapeInternal->attributes.vertices.push_back(glm::vec4(attrib.vertices[i], attrib.vertices[i + 1], attrib.vertices[i + 2], 1.0f));
-    }
-
-    for (size_t i = 0; i < attrib.normals.size(); i += 3)
-    {
-        shapeInternal->attributes.normals.push_back(glm::vec4(attrib.normals[i], attrib.normals[i + 1], attrib.normals[i + 2], 0.0f));
-    }
-
-    for (size_t i = 0; i < attrib.texcoords.size(); i += 2)
-    {
-        shapeInternal->attributes.coords.push_back(glm::vec2(attrib.texcoords[i], attrib.texcoords[i + 1]));
     }
 
     return shapeInternal;

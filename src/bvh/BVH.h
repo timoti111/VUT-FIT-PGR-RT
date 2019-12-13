@@ -4,16 +4,26 @@
 #include <stdint.h>
 #include <glm/mat4x4.hpp>
 #include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
 #include "TreeObject.h"
 #include "RayTracing/Ray.h"
 
-//! Node descriptor for the flattened tree
-struct alignas(16) BVHFlatNode
+struct BVHBuildNode
 {
     glm::vec4 min;
     glm::vec4 max;
     uint32_t start;
     uint32_t nPrims;
+    uint32_t rightOffset;
+};
+
+//! Node descriptor for the flattened tree
+struct alignas(16) BVHFlatNode
+{
+    BVHFlatNode(BVHBuildNode &buildNode);
+    glm::vec3 min;
+    uint32_t nPrims;
+    glm::vec3 max;
     uint32_t rightOffset;
     bool intersect(Ray& ray, glm::vec2& nearFar);
 };

@@ -4,7 +4,7 @@
 #include buffersWavefront.glsl
 #include utils.glsl
 
-layout(local_size_x = 128) in;
+layout(local_size_x = 256) in;
 
 void main()
 {

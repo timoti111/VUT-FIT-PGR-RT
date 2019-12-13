@@ -5,7 +5,7 @@
 #include utils.glsl
 #include materials/bxdf.glsl
 
-layout(local_size_x = 128) in;
+layout(local_size_x = 32) in;
 
 void main()
 {

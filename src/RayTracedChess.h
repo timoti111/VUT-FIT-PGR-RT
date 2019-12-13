@@ -28,6 +28,7 @@ private:
 
     bool drawGuiB = true;
     bool resetRender = true;
+    bool saveImage = true;
     Chess::Chess scene;
     //Scene scene;
     RenderInfo renderInfo;

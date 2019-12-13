@@ -66,38 +66,11 @@ bool IntersectCylinder(Ray ray, vec3 A, vec3 B, float R, inout RayHit bestHit)
 
 }
 
-bool IntersectSelectedObject(Ray ray, vec4 minBound, vec4 maxBound, float radius, inout RayHit bestHit)
-{
-    vec3 p[8];
-    p[0] = minBound.xyz;
-    p[1] = vec3(maxBound.x, minBound.y, minBound.z);
-    p[2] = vec3(maxBound.x, minBound.y, maxBound.z);
-    p[3] = vec3(minBound.x, minBound.y, maxBound.z);
-    p[4] = vec3(minBound.x, maxBound.y, minBound.z);
-    p[5] = vec3(maxBound.x, maxBound.y, minBound.z);
-    p[6] = vec3(maxBound.x, maxBound.y, maxBound.z);
-    p[7] = vec3(minBound.x, maxBound.y, maxBound.z);
-    vec3 lastBotPoint = p[3];
-    vec3 lastTopPoint = p[7];
-    for (int i = 0; i < 4; i++)
-    {
-        IntersectCylinder(ray, p[i], lastBotPoint, radius, bestHit);
-        IntersectCylinder(ray, p[i + 4], lastTopPoint, radius, bestHit);
-        IntersectCylinder(ray, p[i], p[i + 4], radius, bestHit);
-        IntersectSphere(ray, vec4(lastBotPoint, radius), bestHit);
-        IntersectSphere(ray, vec4(lastTopPoint, radius), bestHit);
-
-        lastBotPoint = p[i];
-        lastTopPoint = p[i + 4];
-    }
-    return true;
-}
-
-bool IntersectAABB(Ray ray, vec4 minBound, vec4 maxBound, out vec2 nearFar, float maxT)
+bool IntersectAABB(Ray ray, vec3 minBound, vec3 maxBound, out vec2 nearFar, float maxT)
 {
     vec3 invDir = 1.0f / ray.direction.xyz;
-    vec3 originMinBound = minBound.xyz - ray.origin.xyz;
-    vec3 originMaxBound = maxBound.xyz - ray.origin.xyz;
+    vec3 originMinBound = minBound - ray.origin.xyz;
+    vec3 originMaxBound = maxBound - ray.origin.xyz;
     vec3 t0 = originMinBound * invDir;
     vec3 t1 = originMaxBound * invDir;
 

@@ -1,25 +1,14 @@
 #pragma once
+#include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 
 namespace Geometry
 {
-    struct Triangle
+    struct alignas(16) Triangle
     {
-        Triangle(glm::ivec4 vertices, glm::ivec4 normals, glm::ivec4 uvs);
-        glm::ivec4 vertices;
-        glm::ivec4 normals;
-        glm::ivec4 uvs;
+        glm::vec4 vertices[3];
+        glm::vec4 normals[3];
+        glm::vec2 coords[3];
     };
-
-    namespace GPU
-    {
-        struct alignas(16) Triangle
-        {
-            Triangle(::Geometry::Triangle triangle, glm::ivec3 offset);
-            glm::ivec4 vertices;
-            glm::ivec4 normals;
-            glm::ivec4 uvs;
-        };
-    }
 }

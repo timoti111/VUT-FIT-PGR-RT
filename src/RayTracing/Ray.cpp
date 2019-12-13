@@ -41,11 +41,11 @@ Geometry::MeshInstance* Ray::traceRay(Scene* scene, bool occlusion)
             continue;
 
         // Is leaf -> Intersect
-        if (node.rightOffset == 0)
+        if (node.nPrims)
         {
             for (int o = 0; o < node.nPrims; ++o)
             {
-                Geometry::MeshInstance* mesh = dynamic_cast<Geometry::MeshInstance*>(scene->getPrimitives()[node.start + o]);
+                Geometry::MeshInstance* mesh = dynamic_cast<Geometry::MeshInstance*>(scene->getPrimitives()[node.rightOffset + o]);
                 if (mesh->materialID != -1)
                 {
                     if (mesh->intersect(*this, *scene, occlusion))

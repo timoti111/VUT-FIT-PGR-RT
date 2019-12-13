@@ -32,11 +32,8 @@ public:
     // All these vectors will be sent to GPU
     std::vector<Geometry::GPU::MeshInstance> meshesGPU;
     std::vector<Geometry::GPU::Primitive> primitivesGPU;
-    std::vector<glm::vec4> vertices;
-    std::vector<glm::vec4> normals;
-    std::vector<glm::vec2> coords;
 
-    std::vector<Geometry::GPU::Triangle> triangles;
+    std::vector<Geometry::Triangle> triangles;
 
     std::vector<Geometry::Sphere> spheres;
 

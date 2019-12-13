@@ -97,9 +97,6 @@ void Scene::updateBVHs()
     triangles.clear();
     spheres.clear();
     cylinders.clear();
-    vertices.clear();
-    normals.clear();
-    coords.clear();
     for (int i = 0; i < shapes.size(); i++)
     {
         auto& shape = shapes[i];
@@ -134,17 +131,10 @@ void Scene::updateBVHs()
                     primitivesGPU.push_back(primitive);
                 }
             }
-
-            glm::ivec3 offsets = glm::ivec3(vertices.size(), normals.size(), coords.size());
-            for (auto& triangle : mesh.triangles)
-                triangles.push_back(Geometry::GPU::Triangle(triangle, offsets));
-            for (auto& sphere : mesh.spheres)
+            triangles.insert(triangles.end(), mesh.triangles.begin(), mesh.triangles.end());
             spheres.insert(spheres.end(), mesh.spheres.begin(), mesh.spheres.end());
             cylinders.insert(cylinders.end(), mesh.cylinders.begin(), mesh.cylinders.end());
         }
-        vertices.insert(vertices.end(), shape->attributes.vertices.begin(), shape->attributes.vertices.end());
-        normals.insert(normals.end(), shape->attributes.normals.begin(), shape->attributes.normals.end());
-        coords.insert(coords.end(), shape->attributes.coords.begin(), shape->attributes.coords.end());
     }
 
     update();
@@ -154,28 +144,6 @@ void Scene::updateBVHs()
         meshesGPU.push_back(Geometry::GPU::MeshInstance(*dynamic_cast<Geometry::MeshInstance*>(treePrimitive)));
 
     sceneUpdatedCallback(false);
-
-    /*   Geometry::MeshInstance* selectedMesh = nullptr;
-       for (auto& mesh : meshes)
-       {
-           addPrimitive(&mesh);
-           mesh.bvhOffset = meshBVHs.size();
-           mesh.gpuPrimitiveOffset = primitivesGPU.size();
-           auto& meshBVH = mesh.getFlatTree();
-           meshBVHs.insert(meshBVHs.end(), meshBVH.begin(), meshBVH.end());
-           for (auto& treePrims : mesh.getPrimitives())
-               primitivesGPU.push_back(*dynamic_cast<Geometry::Primitive*>(treePrims));
-       }
-
-       update(*this);
-
-       meshesGPU.clear();
-       for (auto& treePrimitive : getPrimitives())
-           meshesGPU.push_back(*dynamic_cast<Geometry::MeshInstance*>(treePrimitive));
-
-       sceneUpdatedCallback();*/
-
-
 }
 
 void Scene::setSceneUpdateCallback(std::function<void(bool)> callback)
@@ -219,7 +187,7 @@ void Scene::createSelectedObjectShape()
     glm::vec3 lastTopPoint = p.at(7);
 
     auto shape = std::make_shared<Geometry::Shape>();
-    shape->name = "SelectedObject";// , static_cast<int>(primitives.size()), 20 };
+    shape->name = "SelectedObject";
     Geometry::Mesh mesh(shape);
     mesh.name = "Unnamed";
 

@@ -19,10 +19,9 @@ AABB Geometry::Primitive::getAABB()
         {
             auto& triangle = parent->parent->triangles[index];
             auto& objectToWorld = parent->objectToWorld;
-            auto& vertices = parent->parent->parent->attributes.vertices;
-            ret.expandToInclude(glm::vec3(objectToWorld * vertices[triangle.vertices.x]));
-            ret.expandToInclude(glm::vec3(objectToWorld * vertices[triangle.vertices.y]));
-            ret.expandToInclude(glm::vec3(objectToWorld * vertices[triangle.vertices.z]));
+            ret.expandToInclude(glm::vec3(objectToWorld * triangle.vertices[0]));
+            ret.expandToInclude(glm::vec3(objectToWorld * triangle.vertices[1]));
+            ret.expandToInclude(glm::vec3(objectToWorld * triangle.vertices[2]));
             break;
         }
         case SPHERE:
@@ -83,10 +82,9 @@ glm::vec3 Geometry::Primitive::getCentroid()
         {
             auto& triangle = parent->parent->triangles[index];
             auto& objectToWorld = parent->objectToWorld;
-            auto& vertices = parent->parent->parent->attributes.vertices;
-            ret = glm::vec3(objectToWorld * vertices[triangle.vertices.x]);
-            ret += glm::vec3(objectToWorld * vertices[triangle.vertices.y]);
-            ret += glm::vec3(objectToWorld * vertices[triangle.vertices.z]);
+            ret = glm::vec3(objectToWorld * triangle.vertices[0]);
+            ret += glm::vec3(objectToWorld * triangle.vertices[1]);
+            ret += glm::vec3(objectToWorld * triangle.vertices[2]);
             ret /= 3.0f;
             break;
         }
@@ -121,10 +119,9 @@ bool Geometry::Primitive::intersect(Ray& ray, ::Geometry::MeshInstance& mesh)
         {
             auto& triangle = parent->parent->triangles[index];
             auto& objectToWorld = parent->objectToWorld;
-            auto& vertices = parent->parent->parent->attributes.vertices;
-            glm::vec3 vert0 = objectToWorld * vertices[triangle.vertices.x];
-            glm::vec3 vert1 = objectToWorld * vertices[triangle.vertices.y];
-            glm::vec3 vert2 = objectToWorld * vertices[triangle.vertices.z];
+            glm::vec3 vert0 = objectToWorld * triangle.vertices[0];
+            glm::vec3 vert1 = objectToWorld * triangle.vertices[1];
+            glm::vec3 vert2 = objectToWorld * triangle.vertices[2];
             glm::vec3 edge1 = vert1 - vert0;
             glm::vec3 edge2 = vert2 - vert0;
             // begin calculating determinant - also used to calculate U parameter

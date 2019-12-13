@@ -4,7 +4,7 @@
 #include buffersWavefront.glsl
 #include utils.glsl
 
-layout(local_size_x = 128) in;
+layout(local_size_x = 32) in;
 uniform bool firstIteration;
 
 void main()
@@ -20,8 +20,7 @@ void main()
     }
     ivec2 texSize = imageSize(destTex);
 
-    uint maxID = firstIteration ? min(NUM_PATHS, texSize.x * texSize.y) : NUM_PATHS;
-    if (globalInvocationID >= maxID)
+    if (globalInvocationID >= NUM_PATHS)
         return;
 
     RayHit hit = ReadHit(globalInvocationID);

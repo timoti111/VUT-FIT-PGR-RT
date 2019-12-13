@@ -3,7 +3,7 @@
 #include structuresWavefront.glsl
 #include buffersWavefront.glsl
 
-layout(local_size_x = 256) in;
+layout(local_size_x = 32) in;
 uniform bool firstIteration;
 
 void main()
@@ -21,15 +21,14 @@ void main()
     if (storePos.y < texSize.y)
         imageStore(destTex, storePos, vec4(0.0f));
 
-    uint maxID = firstIteration ? min(texSize.x * texSize.y, NUM_PATHS) : NUM_PATHS;
-    if (globalInvocationID >= maxID)
+    if (globalInvocationID >= NUM_PATHS)
         return;
     pathStates[globalInvocationID].seed = globalInvocationID;
 
     newPathQueue[globalInvocationID] = globalInvocationID;
     if (globalInvocationID == 0)
     {
-        queueCounters[NEW_PATH_QUEUE] = maxID;
+        queueCounters[NEW_PATH_QUEUE] = NUM_PATHS;
         currentPixelCount = 0;
     }
 }

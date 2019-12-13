@@ -11,10 +11,9 @@ struct Camera
 
 struct BVHNode
 {
-    vec4 minBound;
-    vec4 maxBound;
-    uint start;
+    vec3 minBound;
     uint nPrims;
+    vec3 maxBound;
     uint rightOffset;
 };
 
@@ -35,9 +34,9 @@ struct Primitive
 
 struct Triangle
 {
-    ivec4 vertices;
-    ivec4 normals;
-    ivec4 coords;
+    vec4 vertices[3];
+    vec4 normals[3];
+    vec2 coords[3];
 };
 
 struct Sphere
@@ -114,17 +113,6 @@ struct PathState
     int triIndex;        // index of hit triangle, -1 by default
     bool lightHit;
     int matID;    // index of hit material
-
-
-
-//    float t;
-//    int matID;
-//    int pathLen;
-//    bool shadowRayBlocked;
-//    float shadowRayT;
-//    uint seed;
-//    int meshIndex;
-//    int pad0;
 };
 
 struct RenderParameters

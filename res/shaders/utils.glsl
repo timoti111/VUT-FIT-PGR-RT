@@ -157,17 +157,15 @@ vec4 getNormalFromMap(RayHit hit, int idx)
     vec2 uvCor = vec2(hit.uv.x, -hit.uv.y);
     vec3 texNormal = texture(textures[idx], uvCor).xyz;
     texNormal = 2.0f * texNormal - vec3(1.0f);
-    
-    ivec4 p = triangles[hit.triIndex].vertices;
-    ivec4 t = triangles[hit.triIndex].coords;
-    vec4 v0 = vertices[p.x];
-    vec4 v1 = vertices[p.y];
-    vec4 v2 = vertices[p.z];
-    vec2 t0 = coords[t.x];
-    vec2 t1 = coords[t.y];
-    vec2 t2 = coords[t.z];
-    vec3 e1d = (v1 - v0).xyz;
-    vec3 e2d = (v2 - v0).xyz;
+
+    vec3 v0 = triangles[hit.triIndex].vertices[0].xyz;
+    vec3 v1 = triangles[hit.triIndex].vertices[1].xyz;
+    vec3 v2 = triangles[hit.triIndex].vertices[2].xyz;
+    vec2 t0 = triangles[hit.triIndex].coords[0];
+    vec2 t1 = triangles[hit.triIndex].coords[1];
+    vec2 t2 = triangles[hit.triIndex].coords[2];
+    vec3 e1d = v1 - v0;
+    vec3 e2d = v2 - v0;
     vec2 t1d = t1 - t0;
     vec2 t2d = t2 - t0;
 

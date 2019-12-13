@@ -14,6 +14,7 @@
 #include <algorithm>
 #include "misc/cpp/imgui_stdlib.h"
 #include "Scene/Geometry/Textures.h"
+#include "lodepng.h"
 
 RayTracedChess::RayTracedChess() : Application(), scene("res/models/chess/board2/", "res/models/chess/set1/")
 {
@@ -119,11 +120,12 @@ void RayTracedChess::draw()
     static glm::vec2 materialStats = glm::vec2(0.0f);
     static glm::vec2 newPathStats = glm::vec2(0.0f);
     static glm::vec2 extRayStats = glm::vec2(0.0f);
+    static glm::vec2 OtherStats = glm::vec2(0.0f);
+    static double actualTime;
 
     if (!drawGuiB)
         checkKeys();
 
-    double actualTime;
     if (resetRender)
     {
         actualRenderParameters = renderInfo.renderParams;
@@ -139,58 +141,68 @@ void RayTracedChess::draw()
     if (iteration < 2)
     {
         if (iteration == 0)
-            advanceBy = 3;
+            advanceBy = (int)std::ceil((2 * width * height) / (float)pathAlive);
 
-        resetProgram->set("firstIteration", GLint(iteration == 0));
         resetProgram->dispatch((int)ceil(std::max(pathAlive, width * height) * WGSizeInvRes), 1, 1);
         newPathProgram->dispatch((int)ceil(pathAlive * WGSizeInvNew), 1, 1);
         extRayProgram->dispatch((int)ceil(pathAlive * WGSizeInvExt), 1, 1);
+    }
+
+    ge::gl::glFinish();
+    if (iteration > 10)
+    {
+        OtherStats += glm::vec2(glfwGetTime() - actualTime, 1.0f);
+        std::cout << "Other Stats: " << OtherStats.x / OtherStats.y << std::endl;
     }
 
     for (int i = 0; i < advanceBy; i++)
     {
         //std::cout << "Iteration: " << iteration << std::endl;
         logicProgram->set("firstIteration", GLint(iteration == 0));
-        //actualTime = glfwGetTime();
+        actualTime = glfwGetTime();
+        ge::gl::glFinish();
         logicProgram->dispatch((int)ceil(pathAlive * WGSizeInvLog), 1, 1);
-        //ge::gl::glFinish();
-        //if (iteration > 10)
-        //{
-        //    logicStats += glm::vec2(glfwGetTime() - actualTime, 1.0f);
-        //    std::cout << "Logic Program: " << logicStats.x / logicStats.y << std::endl;
-        //}
+        ge::gl::glFinish();
+        if (iteration > 10)
+        {
+            logicStats += glm::vec2(glfwGetTime() - actualTime, 1.0f);
+            std::cout << "Logic Program: " << logicStats.x / logicStats.y << std::endl;
+        }
 
-        //ge::gl::glFinish();
-        //actualTime = glfwGetTime();
+        actualTime = glfwGetTime();
+        ge::gl::glFinish();
         newPathProgram->dispatch((int)ceil(pathAlive * WGSizeInvNew), 1, 1);
-        //ge::gl::glFinish();
-        //if (iteration > 10)
-        //{
-        //    newPathStats += glm::vec2(glfwGetTime() - actualTime, 1.0f);
-        //    std::cout << "New Program: " << newPathStats.x / newPathStats.y << std::endl;
-        //}
+        ge::gl::glFinish();
+        if (iteration > 10)
+        {
+            newPathStats += glm::vec2(glfwGetTime() - actualTime, 1.0f);
+            std::cout << "New Program: " << newPathStats.x / newPathStats.y << std::endl;
+        }
 
-        //actualTime = glfwGetTime();
+        actualTime = glfwGetTime();
+        ge::gl::glFinish();
         basicMaterialProgram->dispatch((int)ceil(pathAlive * WGSizeInvMat), 1, 1);
-        //ge::gl::glFinish();
-        //if (iteration > 10)
-        //{
-        //    materialStats += glm::vec2(glfwGetTime() - actualTime, 1.0f);
-        //    std::cout << "Material Program: " << materialStats.x / materialStats.y << std::endl;
-        //}
+        ge::gl::glFinish();
+        if (iteration > 10)
+        {
+            materialStats += glm::vec2(glfwGetTime() - actualTime, 1.0f);
+            std::cout << "Material Program: " << materialStats.x / materialStats.y << std::endl;
+        }
 
-  /*      ge::gl::glFinish();
-        actualTime = glfwGetTime();*/
+        ge::gl::glFinish();
+        actualTime = glfwGetTime();
         extRayProgram->dispatch((int)ceil(pathAlive * WGSizeInvExt), 1, 1);
-        //ge::gl::glFinish();
-        //if (iteration > 10)
-        //{
-        //    extRayStats += glm::vec2(glfwGetTime() - actualTime, 1.0f);
-        //    std::cout << "Ext Program: " << extRayStats.x / extRayStats.y << std::endl;
-        //}
+        ge::gl::glFinish();
+        if (iteration > 10)
+        {
+            extRayStats += glm::vec2(glfwGetTime() - actualTime, 1.0f);
+            std::cout << "Ext Program: " << extRayStats.x / extRayStats.y << std::endl;
+        }
+
         //shadRayProgram->dispatch((int)ceil(pathAlive * workGroupSizeXInv), 1, 1);
     }
 
+    actualTime = glfwGetTime();
     if (iteration == 0)
     {
         actualRenderParameters.maxBounces = renderInfo.renderParams.maxBounces;
@@ -201,6 +213,13 @@ void RayTracedChess::draw()
 
     basicDrawProgram->use();
     ge::gl::glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    if (saveImage)
+    {
+        saveRenderToFile();
+        saveImage = false;
+    }
+
     drawGui(drawGuiB);
     swap();
     iteration++;
@@ -285,32 +304,38 @@ void RayTracedChess::updateBuffers()
     vars.reCreate<ge::gl::Buffer>("meshesBuffer", scene.meshesGPU, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, logicProgram->getBufferBinding("MeshesBuffer"));
     vars.reCreate<ge::gl::Buffer>("primitivesBuffer", scene.primitivesGPU, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, logicProgram->getBufferBinding("PrimitivesBuffer"));
     vars.reCreate<ge::gl::Buffer>("trianglesBuffer", scene.triangles, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, logicProgram->getBufferBinding("TrianglesBuffer"));
-    vars.reCreate<ge::gl::Buffer>("verticesBuffer", scene.vertices, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, logicProgram->getBufferBinding("VerticesBuffer"));
-    vars.reCreate<ge::gl::Buffer>("normalsBuffer", scene.normals, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, logicProgram->getBufferBinding("NormalsBuffer"));
-    vars.reCreate<ge::gl::Buffer>("coordsBuffer", scene.coords, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, logicProgram->getBufferBinding("CoordsBuffer"));
     vars.reCreate<ge::gl::Buffer>("spheresBuffer", scene.spheres, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, logicProgram->getBufferBinding("SpheresBuffer"));
     vars.reCreate<ge::gl::Buffer>("cylindersBuffer", scene.cylinders, GL_STATIC_READ)->bindBase(GL_SHADER_STORAGE_BUFFER, logicProgram->getBufferBinding("CylindersBuffer"));
 }
 
+static std::string rednerFilename;
 void RayTracedChess::saveRenderToFile()
 {
-    auto render = vars.get<ge::gl::Texture>("computeShaderImage");
-    std::vector<float> renderData;
+    if (rednerFilename.empty())
+        return;
+    auto renderData = std::vector<unsigned char>(width * height * 4, 0);
+    ge::gl::glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, renderData.data());
+    for (int i = 0; i < (height / 2); i++)
+        std::swap_ranges(renderData.begin() + i * width * 4,
+                         renderData.begin() + (i + 1) * width * 4,
+                         renderData.end() - (i + 1) * width * 4);
+    lodepng::encode(rednerFilename + ".png", renderData, width, height);
+
     //render->getCompressedData()
 }
 
 void RayTracedChess::drawGui(bool drawGui)
 {
-    static std::string filename;
     if (!drawGui)
         return;
 
     ImGui::Begin("App info");
-    ImGui::InputText("Filename", &filename);
+    ImGui::InputText("Filename", &rednerFilename);
     if (ImGui::Button("Save render"))
-        saveRenderToFile();
+        saveImage = true;
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
     ImGui::End();
+    ImGui::ShowDemoWindow();
 
     renderInfo.drawGui();
     //scene.drawMaterialSettings();

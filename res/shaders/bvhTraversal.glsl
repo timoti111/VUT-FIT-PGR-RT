@@ -3,12 +3,10 @@ bool IntersectPrimitive(Ray ray, Primitive primitive, Mesh mesh, bool occlusion,
 {
     switch (primitive.type)
     {
-        case TRIANGLE:                
-            Triangle triangle = triangles[primitive.index];
-            ivec3 vIndexes = triangle.vertices.xyz;
-            vec3 v0 = (mesh.objectToWorld * vertices[vIndexes.x]).xyz;
-            vec3 v1 = (mesh.objectToWorld * vertices[vIndexes.y]).xyz;
-            vec3 v2 = (mesh.objectToWorld * vertices[vIndexes.z]).xyz;
+        case TRIANGLE:
+            vec3 v0 = (mesh.objectToWorld * triangles[primitive.index].vertices[0]).xyz;
+            vec3 v1 = (mesh.objectToWorld * triangles[primitive.index].vertices[1]).xyz;
+            vec3 v2 = (mesh.objectToWorld * triangles[primitive.index].vertices[2]).xyz;
             float t, u, v;
 
             if (IntersectTriangle(ray, v0, v1, v2, t, u, v))
@@ -20,23 +18,21 @@ bool IntersectPrimitive(Ray ray, Primitive primitive, Mesh mesh, bool occlusion,
                 if (t < intersection.t)
                 {
                     intersection.t = t;
+                    intersection.matID = mesh.materialID;
 //                    if (mesh.smoothing)
 //                    {
-//                        ivec3 nIndices = triangle.normals.xyz;
-//                        vec4 n0 = (mesh.objectToWorld * normals[nIndices.x]);
-//                        vec4 n1 = (mesh.objectToWorld * normals[nIndices.y]);
-//                        vec4 n2 = (mesh.objectToWorld * normals[nIndices.z]);
+//                        vec4 n0 = (mesh.objectToWorld * vec4(triangles[primitive.index].normals[0], 0.0f));
+//                        vec4 n1 = (mesh.objectToWorld * vec4(triangles[primitive.index].normals[1], 0.0f));
+//                        vec4 n2 = (mesh.objectToWorld * vec4(triangles[primitive.index].normals[2], 0.0f));
 //                        intersection.normal = (1 - u - v) * n0 + u * n1 + v * n2;
 //                    }
 //                    else
                         intersection.normal = vec4(cross(v1 - v0, v2 - v0), 0.0f);
-                    ivec3 uvIndices = triangle.coords.xyz;
-                    vec2 uv0 = coords[uvIndices.x];
-                    vec2 uv1 = coords[uvIndices.y];
-                    vec2 uv2 = coords[uvIndices.z];
+                    vec2 uv0 = triangles[primitive.index].coords[0];
+                    vec2 uv1 = triangles[primitive.index].coords[1];
+                    vec2 uv2 = triangles[primitive.index].coords[2];
                     intersection.uv = (1.0f - u - v) * uv0 + u * uv1 + v * uv2;
                     
-                    intersection.matID = mesh.materialID;
                     intersection.triIndex = primitive.index;
                     return true;
                 }
@@ -95,11 +91,11 @@ bool IntersectMesh(Ray ray, Mesh mesh, bool occlusion, inout RayHit intersection
         BVHNode node = meshBVHs[ni];
 
         // Is leaf -> Intersect
-        if (node.rightOffset == 0)
+        if (node.nPrims > 0)
         {
             for(int o = 0; o < node.nPrims; ++o)
             {
-                Primitive primitive = primitives[mesh.primitiveOffset + node.start + o];
+                Primitive primitive = primitives[mesh.primitiveOffset + node.rightOffset + o];
                 if (IntersectPrimitive(ray, primitive, mesh, occlusion, intersection) && occlusion)
                     return true;
             }
@@ -169,11 +165,11 @@ bool IntersectScene(Ray ray, bool occlusion, inout RayHit intersection)
         BVHNode node = sceneBVH[ni];
 
         // Is leaf -> Intersect
-        if (node.rightOffset == 0)
+        if (node.nPrims > 0)
         {
             for(int o = 0; o < node.nPrims; ++o)
             {
-                Mesh mesh = meshes[node.start + o];
+                Mesh mesh = meshes[node.rightOffset + o];
 
                 if (IntersectMesh(ray, mesh, occlusion, intersection) && occlusion)
                     return true;
@@ -247,10 +243,10 @@ bool IntersectScene2(Ray ray, bool occlusion, inout RayHit intersection)
         BVHNode node = sceneBVH[ni];
 
         // Is leaf -> Intersect
-        if (node.rightOffset == 0)
+        if (node.nPrims > 0)
         {
             for(int o = 0; o < node.nPrims; ++o)
-                toIntersect[intStackPtr++] = node.start + o;
+                toIntersect[intStackPtr++] = node.rightOffset + o;
         }
         else
         { // Not a leaf
@@ -325,8 +321,10 @@ bool IntersectScene4(Ray ray, bool occlusion, inout RayHit intersection)
         Mesh mesh = meshes[i];
         BVHNode meshNode = meshBVHs[mesh.bvhOffset];
         if (IntersectAABB(ray, meshNode.minBound, meshNode.maxBound, bbhitsc0, intersection.t))
+        {
             if (IntersectMesh(ray, mesh, occlusion, intersection) && occlusion)
                 return true;
+        }
     }
 
     return intersection.t < tLast;

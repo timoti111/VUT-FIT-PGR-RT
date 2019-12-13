@@ -55,8 +55,8 @@ void BVH::update()
     todo[stackptr].parent = 0xfffffffc;
     stackptr++;
 
-    BVHFlatNode node;
-    std::vector<BVHFlatNode> buildnodes;
+    BVHBuildNode node;
+    std::vector<BVHBuildNode> buildnodes;
     buildnodes.reserve(build_prims.size() * 2);
 
     while (stackptr > 0)
@@ -146,11 +146,10 @@ void BVH::update()
         todo[stackptr].parent = nNodes - 1;
         stackptr++;
     }
-
     // Copy the temp node data to a flat array
     flatTree.clear();
     for (uint32_t n = 0; n < nNodes; ++n)
-        flatTree.emplace_back(buildnodes[n]);
+        flatTree.emplace_back(BVHFlatNode(buildnodes[n]));
 }
 
 std::vector<BVHFlatNode>& BVH::getFlatTree()
@@ -175,11 +174,25 @@ void BVH::clearPrimitives()
     nLeafs = 0;
 }
 
+BVHFlatNode::BVHFlatNode(BVHBuildNode& buildNode) : min(buildNode.min), max(buildNode.max)
+{
+    if (buildNode.rightOffset == 0)
+    {
+        rightOffset = buildNode.start;
+        nPrims = buildNode.nPrims;
+    }
+    else
+    {
+        nPrims = 0;
+        rightOffset = buildNode.rightOffset;
+    }
+}
+
 bool BVHFlatNode::intersect(Ray& ray, glm::vec2& nearFar)
 {
     glm::vec3 invDir = 1.0f / ray.direction;
-    glm::vec3 originMinBound = min - ray.origin;
-    glm::vec3 originMaxBound = max - ray.origin;
+    glm::vec3 originMinBound = min - glm::vec3(ray.origin);
+    glm::vec3 originMaxBound = max - glm::vec3(ray.origin);
     glm::vec3 t0 = originMinBound * invDir;
     glm::vec3 t1 = originMaxBound * invDir;
 

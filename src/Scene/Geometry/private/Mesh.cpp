@@ -111,11 +111,11 @@ bool Geometry::MeshInstance::intersect(Ray& ray, Scene& scene, bool occlusion)
             continue;
 
         // Is leaf -> Intersect
-        if (node.rightOffset == 0)
+        if (node.nPrims)
         {
             for (int o = 0; o < node.nPrims; ++o)
             {
-                auto primitive = dynamic_cast<Geometry::Primitive*>(getPrimitives()[node.start + o]);
+                auto primitive = dynamic_cast<Geometry::Primitive*>(getPrimitives()[node.rightOffset + o]);
                 if (primitive->intersect(ray, *this) && occlusion)
                     return true;
             }
