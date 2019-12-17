@@ -10,6 +10,7 @@
 #include "Geometry/Shape.h"
 #include "Geometry/Material.h"
 #include <utility>
+#include "Geometry/Lights.h"
 
 const float kInfinity = std::numeric_limits<float>::max();
 
@@ -26,6 +27,8 @@ public:
     void updateBVHs();
     void setSceneUpdateCallback(std::function<void(bool)> callback);
     void drawMaterialSettings();
+    void drawLightSettings();
+    void addLight();
 
 
     std::map<std::string, int> drawableMaterials;
@@ -41,14 +44,18 @@ public:
 
     std::vector<BVHFlatNode> meshBVHs;
 
+    Lights lights;
 private:
     std::vector<std::shared_ptr<Geometry::Shape>> shapes;
     void createSelectedObjectShape();
+    void createLightShape();
+    
 
 protected:
     std::function<void(bool)> sceneUpdatedCallback;
     bool updateSceneBVH = false;
     bool updateSelectedMesh = false;
     Geometry::MeshInstance* actualSelectedMesh = nullptr;
+    Geometry::MeshInstance* selectedLight = nullptr;
     int selectedObjectMaterial;
 };

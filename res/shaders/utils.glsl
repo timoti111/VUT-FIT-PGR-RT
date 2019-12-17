@@ -40,38 +40,6 @@ float rand(inout uint seed)
     return float(seed) * UINTMAXINV; // 1.0f / 2^32
 }
 
-vec4 pick_random_point_in_sphere(inout uint seed)
-{
-    float x0, x1, x2, x3, d2;
-    do
-    {
-        x0 = rand(seed);
-        x1 = rand(seed);
-        x2 = rand(seed);
-        x3 = rand(seed);
-        d2 = x0 * x0 + x1 * x1 + x2 * x2 + x3 * x3;
-    } while(d2 > 1.0f);
-    float scale = 1.0f / d2;
-    return vec4(
-        2 * (x1 * x3 + x0 * x2) * scale,
-        2 * (x2 * x3 + x0 * x1) * scale,
-        (x0 * x0 + x3 * x3 - x1 * x1 - x2 * x2) * scale,
-        1.0f
-    );
-}
-
-vec4 pick_random_point_in_semisphere(vec3 v, inout uint seed)
-{
-    vec4 result = pick_random_point_in_sphere(seed);
-    if (dot(v, result.xyz) < 0)
-    {
-        result.x = -result.x;
-        result.y = -result.y;
-        result.z = -result.z;
-    }
-    return normalize(result);
-}
-
 vec4 sampleEnviroment(uint textureID, vec4 direction, float lod)
 {
     float theta = acos(direction.y) * INVPI;
@@ -115,7 +83,7 @@ void WriteHit(RayHit hit, uint pathIndex)
 
 
 
-vec4 cosSampleHemisphere(vec4 n, inout uint seed, inout float p)
+vec4 cosSampleHemisphere(vec4 n, inout uint seed)
 {
     float r1 = 2.0f * PI * rand(seed);
     float r2 = rand(seed);
@@ -141,9 +109,14 @@ vec4 cosSampleHemisphere(vec4 n, inout uint seed, inout float p)
     w *= (sqrt(1 - r2));
 
     vec3 dir = normalize(u + v + w);
-//    p = HEMISPHERE_PDF; //pdf
-    p = dot(n.xyz, dir) * INVPI; //pdf
 	return vec4(dir, 0.0f);
+}
+
+vec2 sampleUniformDisc(inout uint seed)
+{
+    float sqrt_r = sqrt(rand(seed));
+    float th = 2 * PI * rand(seed);
+    return vec2(sqrt_r * cos(th), sqrt_r * sin(th));
 }
 
 vec4 getNormalFromMap(RayHit hit, int idx)
@@ -200,6 +173,14 @@ uint atomicWarpAdd(uint counterIndex, int number)
         res = atomicAdd(queueCounters[counterIndex], number * bitCount(mask));
     res = readInvocationARB(res, leader);
     return res + bitCount(mask & ((1 << gl_SubGroupInvocationARB) - 1));
+}
+
+vec4 smapleLightSurface(Light light, vec4 hitPosition, inout vec4 normal, inout uint seed)
+{
+    vec4 lightPos = vec4(light.sphere.xyz, 1.0f);
+    vec4 lightHitNormal = hitPosition - lightPos;
+    normal = cosSampleHemisphere(lightHitNormal, seed) * light.sphere.w;
+    return lightPos + normal;
 }
 
 

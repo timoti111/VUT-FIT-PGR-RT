@@ -2,7 +2,6 @@
 #include "bvh/BVH.h"
 #include "RenderInfo.h"
 #include "Scene/Scene.h"
-#define FLT_MAX 3.402823466e+38
 
 // Node for storing state information during traversal.
 struct BVHTraversal
@@ -23,7 +22,7 @@ Geometry::MeshInstance* Ray::traceRay(Scene* scene, bool occlusion)
 
     // "Push" on the root node to the working set
     todo[stackptr].i = 0;
-    todo[stackptr].mint = -FLT_MAX;
+    todo[stackptr].mint = -std::numeric_limits<float>::max();
     float tLast = this->t;
     auto& sceneBVH = scene->getFlatTree();
     Geometry::MeshInstance* meshInstance = nullptr;
@@ -50,9 +49,9 @@ Geometry::MeshInstance* Ray::traceRay(Scene* scene, bool occlusion)
                 {
                     if (mesh->intersect(*this, *scene, occlusion))
                     {
-                        meshInstance = mesh;
                         if (occlusion)
                             return meshInstance;
+                        meshInstance = mesh;
                     }
                 }
             }
@@ -116,7 +115,7 @@ Ray Ray::createCameraRay(RenderInfo* renderInfo, glm::vec2 pixel, glm::ivec2 res
     float pixelSize = camera.sensorHalfWidth / (resolution.x * 0.5f);
     ray.direction = glm::vec4(glm::normalize(glm::vec3(camera.direction + camera.left * (camera.sensorHalfWidth - (pixel.x + 0.5f) * pixelSize) + camera.up * ((pixel.y + 0.5f) * pixelSize - sensorHalfHeight))), 0.0f);
     ray.origin = glm::vec4(camera.position);
-    ray.t = FLT_MAX;
+    ray.t = std::numeric_limits<float>::max();
     return ray;
 }
 

@@ -9,20 +9,22 @@ namespace Chess
     public:
         enum class Color
         {
-            WHITE, BLACK
+            BLACK, WHITE
         };
 
-        Piece(Board* board, int color, std::shared_ptr<Geometry::MeshInstance> instance);
+        Piece(Board* board, int materialID, Color color, std::shared_ptr<Geometry::MeshInstance> instance);
         bool placeAt(std::string index);
         bool drawGui();
         Geometry::MeshInstance* getInstance();
         Color getColor();
         std::string getIndex();
+        std::string getName();
 
     protected:
         Board* board;
         Color color;
         std::shared_ptr<Geometry::MeshInstance> instance;
         int row = 0, col = 0;
+        std::string name;
     };
 }

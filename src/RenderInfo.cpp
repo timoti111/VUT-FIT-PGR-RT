@@ -3,6 +3,7 @@
 #include <imgui.h>
 #include "RenderInfo.h"
 #include "glm/trigonometric.hpp"
+#include <iostream>
 
 RenderInfo::RenderInfo()
 {
@@ -13,12 +14,15 @@ RenderInfo::RenderInfo()
     rotation = glm::vec2(0.0f, 0.0f);
     renderParams.camera.aperture = 0.0f;
     renderParams.camera.focusDistance = 1.0f;
-    renderParams.maxBounces = 100;
+    renderParams.maxBounces = 8;
     renderParams.backgroundIntensity = 1.0f;
     renderParams.backgroundColor = glm::vec4(1.0f);
     renderParams.useEnvironmentMap = true;
     renderParams.useRussianRoulette = true;
-    previewBounces = 1;
+    renderParams.sampleDirect = true;
+    renderParams.sampleIndirect = true;
+    renderParams.numberOfLights = 0;
+    previewBounces = 2;
     setFov(90.0f);
 }
 
@@ -121,18 +125,18 @@ void RenderInfo::setFocusDistance(float focusDistance)
 
 void RenderInfo::drawGui()
 {
-    static bool useAperture = false;
-    const static float apertureZero = 0.0f;
-    const static float focusApertureZero = 1.0f;
-    static auto apertureOld = renderParams.camera.aperture;
-    static auto focusOld = renderParams.camera.focusDistance;
     bool useEnvironmentMap = renderParams.useEnvironmentMap;
     bool useRussianRoulette = renderParams.useRussianRoulette;
+    bool sampleDirect = renderParams.sampleDirect;
+    bool sampleIndirect = renderParams.sampleIndirect;
     bool changed = false;
+
     ImGui::Begin("Render Settings");
     ImGui::Text("Max bounces");
     changed |= ImGui::InputInt("bounces", &renderParams.maxBounces);
     changed |= ImGui::Checkbox("Use russian roulette", &useRussianRoulette);
+    changed |= ImGui::Checkbox("Sample direct light", &sampleDirect);
+    changed |= ImGui::Checkbox("Sample indirect light", &sampleIndirect);
     if (ImGui::CollapsingHeader("Background settings"))
     {
         changed |= ImGui::ColorEdit3("Background color", &renderParams.backgroundColor.x);
@@ -143,32 +147,22 @@ void RenderInfo::drawGui()
     if (ImGui::CollapsingHeader("Camera settings"))
     {
         ImGui::Text("Field of view");
-        bool fovChanged = ImGui::SliderFloat("degrees", &fov, 10.0f, 180.0f);
+        bool fovChanged = ImGui::SliderFloat("degrees", &fov, 1.0f, 179.9f);
         if (fovChanged)
             renderParams.camera.sensorHalfWidth = glm::tan(glm::radians(fov * 0.5f));
         changed |= fovChanged;
+        ImGui::Text("Aperture Diameter");
+        changed |= ImGui::SliderFloat("cm", &renderParams.camera.aperture, 0.0f, 20.0f);
         ImGui::Text("Movement Speed");
         changed |= ImGui::InputFloat("m/s", &speed, 0.01f, 1.0f, "%.3f");
-
-        ImGui::Checkbox("Use aperture", &useAperture);
-        if (useAperture)
-        {
-            ImGui::Text("Aperture");
-            changed |= ImGui::SliderFloat("m", &renderParams.camera.aperture, 0.0f, 180.0f);
-            ImGui::Text("Focus distance");
-            changed |= ImGui::SliderFloat("m", &renderParams.camera.focusDistance, 0.0f, 180.0f);
-            //setAperture(apertureOld);
-            //setFocusDistance(focusOld);
-        }
-        else
-        {
-            setAperture(apertureZero);
-            setFocusDistance(focusApertureZero);
-        }
     }
+    ImGui::End();
+
     renderParams.useEnvironmentMap = useEnvironmentMap;
     renderParams.useRussianRoulette = useRussianRoulette;
-    ImGui::End();
+    renderParams.sampleDirect = sampleDirect;
+    renderParams.sampleIndirect = sampleIndirect;
+
     if (changed)
         paramsUpdatedCallback();
 }

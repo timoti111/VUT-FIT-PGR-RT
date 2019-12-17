@@ -1,10 +1,10 @@
 // UNIFORMS
-layout(binding = 0) uniform RenderParametersBuffer
+layout(binding = 1) uniform RenderParametersBuffer
 {
     RenderParameters renderParameters;
 };
-layout(rgba32f, binding = 1) uniform image2D destTex;
-layout(binding = 2) uniform sampler2D textures[20];
+layout(rgba32f, binding = 2) uniform image2D destTex;
+layout(binding = 3) uniform sampler2D textures[32];
 
 #define NEW_PATH_QUEUE 0
 #define MATERIAL_QUEUE 1
@@ -51,4 +51,8 @@ layout(std430, binding = 7) buffer SpheresBuffer
 layout(std430, binding = 8) buffer CylindersBuffer
 {
     Cylinder cylinders[];
+};
+layout(std430, binding = 9) buffer LightsBuffer
+{
+    Light lights[];
 };

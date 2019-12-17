@@ -5,7 +5,6 @@
 #include utils.glsl
 
 layout(local_size_x = 32) in;
-uniform bool firstIteration;
 
 void main()
 {
@@ -26,32 +25,75 @@ void main()
     RayHit hit = ReadHit(globalInvocationID);
     Ray ray = CreateRay(pathStates[globalInvocationID].orig, pathStates[globalInvocationID].dir);
     vec4 T = pathStates[globalInvocationID].T;
-    
-
     uint pathLen = pathStates[globalInvocationID].pathLen;
     bool terminated = false;
     bool newEiWritten = false;
 
+//    Material material = materials[pathStates[globalInvocationID].matID];
+//    pathStates[globalInvocationID].Ei += material.Ke;
+//    terminated = true;
+
+    if (renderParameters.sampleDirect)
+    {
+        bool blocked = pathStates[globalInvocationID].shadowRayBlocked;
+        if (!blocked)
+        {
+            vec4 emission = pathStates[globalInvocationID].lastEmission;
+            vec4 bsdfDirect = pathStates[globalInvocationID].lastBsdfDirect;
+            float pdfDirect = pathStates[globalInvocationID].lastPdfDirect;
+            float pdfIndirect = pathStates[globalInvocationID].lastPdfIndirect;
+            float cosThDirect = pathStates[globalInvocationID].lastCosThDirect;
+            float lightPickProb = pathStates[globalInvocationID].lastLightPickProb;
+
+            // Only do MIS weighting if other samplers (bsdf-sampling) could have generated the sample
+            float weight = 1.0f;
+//            if (renderParameters.sampleIndirect)
+//                weight = (pdfDirect * lightPickProb) / (pdfDirect * lightPickProb + pdfIndirect);
+
+            vec4 lastT = pathStates[globalInvocationID].lastT;
+            vec4 contribution = bsdfDirect * emission * weight * cosThDirect / (lightPickProb * pdfDirect);
+            pathStates[globalInvocationID].Ei += lastT * contribution;
+//            vec4 indirectContrib = T / lastT;
+//            T = ((indirectContrib + contribution) / 2) * lastT;
+//            pathStates[globalInvocationID].T = T;
+            pathStates[globalInvocationID].shadowRayBlocked = true;
+            newEiWritten = true;
+        }
+    }
+
     if (hit.matID < 0)
     {
-        float weight = 1.0f;
         bool lastSpecular = pathStates[globalInvocationID].lastSpecular;
-        vec4 bg;
+        vec4 bg = vec4(0.0f);
 
-        if (renderParameters.useEnvironmentMap)
-            bg = clamp(sampleEnviroment(renderParameters.environmentMapTextureID, ray.direction, 2.0f), 0.0f, 10.0f);
-        else
-            bg = renderParameters.backgroundColor;
-
-        vec4 newEi = pathStates[globalInvocationID].Ei + weight * T * bg * renderParameters.backgroundIntensity;
-        pathStates[globalInvocationID].Ei = newEi;
+        if (renderParameters.sampleIndirect)
+        {
+            if (renderParameters.useEnvironmentMap)
+            {
+                if (lastSpecular || pathLen == 1)
+                    bg = sampleEnviroment(renderParameters.environmentMapTextureID, ray.direction, 0.0f);
+                else
+                    bg = sampleEnviroment(renderParameters.environmentMapTextureID, ray.direction, 7.0f);
+            }
+            else
+                bg = renderParameters.backgroundColor;
+            bg = bg * T * renderParameters.backgroundIntensity;
+        }
+        pathStates[globalInvocationID].Ei += bg;
         newEiWritten = true;
         terminated = true;
     }
     else if (pathStates[globalInvocationID].lightHit)
     {
-        vec4 newEi = pathStates[globalInvocationID].Ei + T;
-        pathStates[globalInvocationID].Ei = newEi;
+        float lightPickProb = pathStates[globalInvocationID].lastLightPickProb;
+        float pdfDirect = pathStates[globalInvocationID].lastPdfDirect;
+        float pdfIndirect = pathStates[globalInvocationID].lastPdfIndirect;
+        float weight = 1.0f;
+        Material mat = materials[pathStates[globalInvocationID].matID];
+        vec4 emission = mat.Ke * mat.Ns * INVPI;
+//        if (renderParameters.sampleDirect)
+//            weight = pdfIndirect / (pdfDirect * lightPickProb + pdfIndirect);
+        pathStates[globalInvocationID].Ei += T * weight * emission;
         newEiWritten = true;
         terminated = true;
     }
@@ -59,7 +101,7 @@ void main()
     {
         terminated = terminated || pathLen - 1 >= renderParameters.maxBounces;
         // Russian roulette
-        if (terminated && renderParameters.useRussianRoulette) // OPRAVIT RULETU
+        if (terminated && renderParameters.useRussianRoulette)
         {
 //            float contProb = clamp(max3(T.xyz), 0.01f, 0.5f);
             float contProb = max3(T.xyz);
@@ -68,32 +110,7 @@ void main()
             pathStates[globalInvocationID].T = T;
         }
 
-        terminated = terminated || T == vec4(0.0f) || pathStates[globalInvocationID].lastPdfW == 0.0f;
-    }
-
-    // Explicit light sample (NEE), if non-occluded
-    bool blocked = pathStates[globalInvocationID].shadowRayBlocked;
-    if (!blocked)
-    {
-        vec4 emission = pathStates[globalInvocationID].lastEmission;
-        vec4 bsdf = pathStates[globalInvocationID].lastBsdf;
-        float cosTh = pathStates[globalInvocationID].lastCosTh; // cos at surface
-        float directPdfW = pathStates[globalInvocationID].lastPdfDirect;
-        float bsdfPdfW = pathStates[globalInvocationID].lastPdfImplicit;
-        float lightPickProb = pathStates[globalInvocationID].lastLightPickProb;
-
-        // Only do MIS weighting if other samplers (bsdf-sampling) could have generated the sample
-        float weight = 1.0f;
-//        if (params->sampleImpl)
-//        {
-            weight = (directPdfW * lightPickProb) / (directPdfW * lightPickProb + bsdfPdfW);
-//        }
-
-        vec4 T = pathStates[globalInvocationID].lastT;
-        vec4 contrib = bsdf * T * emission * weight * cosTh / (lightPickProb * directPdfW);
-        vec4 newEi = pathStates[globalInvocationID].Ei + contrib;
-        pathStates[globalInvocationID].Ei = newEi;
-        newEiWritten = true;
+        terminated = terminated || T == vec4(0.0f);
     }
 
     if(terminated)
@@ -106,16 +123,32 @@ void main()
             imageStore(destTex, pixelIndex, result);
         }
         uint index = atomicWarpAdd(NEW_PATH_QUEUE, 1);
-        if (firstIteration)
-        {
-            if (currentPixelCount + index >= texSize.x * texSize.y)
-            {
-                uint index = atomicWarpAdd(NEW_PATH_QUEUE, -1);
-                return;
-            }
-        }
         newPathQueue[index] = globalInvocationID;
         return;
+    }
+
+    if (renderParameters.sampleDirect)
+    {
+        uint numOfLights = renderParameters.numberOfLights;
+        if (numOfLights != 0)
+        {
+            float randomPick = rand(pathStates[globalInvocationID].seed);
+            float pickProbability = 1.0f / numOfLights;
+            int lightIndex = int(floor(randomPick / pickProbability));
+            Light light = lights[lightIndex];
+            Material mat = materials[light.materialID];
+            vec4 lightNormal;
+            vec4 lightPos = smapleLightSurface(light, hit.position, lightNormal, pathStates[globalInvocationID].seed);
+            vec4 fromHitToLight = lightPos - hit.position;
+            float maxShadowLen = length(fromHitToLight) * 0.999f;
+            pathStates[globalInvocationID].maxShadowRayLen = length(fromHitToLight) * 0.999f;
+            fromHitToLight = normalize(fromHitToLight);
+            pathStates[globalInvocationID].shadowDir = fromHitToLight;
+            pathStates[globalInvocationID].shadowOrig = hit.position + 1e-4f * fromHitToLight;
+            pathStates[globalInvocationID].lastEmission = mat.Ke * mat.Ns * INVPI;
+            pathStates[globalInvocationID].lastLightPickProb = SPHERE_PDF;
+//            pathStates[pathIndex].lastPdfDirect = SPHERE_PDF * pow(maxShadowLen, 2) / abs(dot(lightNormal, fromHitToLight));
+        }
     }
     
     uint index = atomicWarpAdd(MATERIAL_QUEUE, 1);

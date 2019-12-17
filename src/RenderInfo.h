@@ -19,9 +19,12 @@ struct alignas(16) RenderParameters
     glm::vec4 backgroundColor;
     float backgroundIntensity;
     int maxBounces;
+    unsigned sampleDirect;
+    unsigned sampleIndirect;
     unsigned useEnvironmentMap;
     unsigned useRussianRoulette;
     unsigned environmentMapTextureID;
+    unsigned numberOfLights;
 };
 
 class RenderInfo

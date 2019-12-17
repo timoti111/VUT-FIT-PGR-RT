@@ -2,19 +2,19 @@
 #include defines.glsl
 #include structuresWavefront.glsl
 #include buffersWavefront.glsl
+#include utils.glsl
 #include bvhTraversal.glsl
 
-layout(local_size_x = 256) in;
+layout(local_size_x = 32) in;
 
 void main()
 {
     uint globalInvocationID = uint(gl_GlobalInvocationID.x);
-    if (globalInvocationID >= queueLengths.shadowRayCounter)
+    if (globalInvocationID >= queueCounters[SHADOW_RAY_QUEUE])
         return;
 
-//    uint pathIndex = shadowRayCastPaths[globalInvocationID];
-//    Ray ray = CreateRay(pathStates[pathIndex].primOrig, pathStates[pathIndex].primDir);
-//    RayHit rayHit = CreateRayHit();
-//    rayHit.t = pathStates[pathIndex].t;
-//    pathStates[pathIndex].shadowRayBlocked = IntersectScene(ray, true, rayHit);
+    uint pathIndex = shadowRayQueue[globalInvocationID];
+    Ray ray = CreateRay(pathStates[pathIndex].shadowOrig, pathStates[pathIndex].shadowDir);
+    RayHit rayHit = EmptyHit(pathStates[pathIndex].maxShadowRayLen);
+    pathStates[pathIndex].shadowRayBlocked = IntersectScene4(ray, true, rayHit) || IntersectLights(ray, true, rayHit);
 }

@@ -20,6 +20,7 @@ struct alignas(16) Material
     int valueToIndex(int value);
     static Material* generateNewMaterial(int& newIndex);
     static std::vector<Material>& getMaterials();
+    static Material* getMaterial(int index);
 };
 
 enum MaterialType

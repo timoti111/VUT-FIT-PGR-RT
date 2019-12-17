@@ -86,30 +86,38 @@ bool IntersectAABB(Ray ray, vec3 minBound, vec3 maxBound, out vec2 nearFar, floa
 bool IntersectTriangle(Ray ray, vec3 vert0, vec3 vert1, vec3 vert2,
                        inout float t, inout float u, inout float v)
 {
-    // find vectors for two edges sharing vert0
     vec3 edge1 = vert1 - vert0;
     vec3 edge2 = vert2 - vert0;
-    // begin calculating determinant - also used to calculate U parameter
     vec3 pvec = cross(ray.direction.xyz, edge2);
-    // if determinant is near zero, ray lies in plane of triangle
     float det = dot(edge1, pvec);
-    // use backface culling
     if (abs(det) < EPSILON)
         return false;
     float inv_det = 1.0f / det;
-    // calculate distance from vert0 to ray origin
     vec3 tvec = ray.origin.xyz - vert0;
-    // calculate U parameter and test bounds
     u = dot(tvec, pvec) * inv_det;
     if (u < 0.0f || u > 1.0f)
         return false;
-    // prepare to test V parameter
     vec3 qvec = cross(tvec, edge1);
-    // calculate V parameter and test bounds
     v = dot(ray.direction.xyz, qvec) * inv_det;
     if (v < 0.0f || u + v > 1.0f)
         return false;
-    // calculate t, ray intersects triangle
     t = dot(edge2, qvec) * inv_det;
     return t >= 0.0f;
+}
+
+bool IntersectLights(Ray ray, bool occlusion, inout RayHit bestHit)
+{
+    bool hit = false;
+    for (uint i = 0; i < renderParameters.numberOfLights; i++)
+    {
+        Light light = lights[i];
+        hit = hit || IntersectSphere(ray, light.sphere, bestHit);
+        if (hit)
+        {
+            if (occlusion)
+                return true;
+            bestHit.matID = light.materialID;
+        }
+    }
+    return hit;
 }

@@ -35,6 +35,7 @@ private:
     HDRLoaderResult backgroundTexture;
     double firstMouse = true;
     const int pathAlive = 1 << 19;
+
     GLint workGroupSizeRes[3];
     std::unique_ptr<ge::gl::Program> resetProgram;
     GLint workGroupSizeLog[3];
@@ -45,6 +46,8 @@ private:
     std::unique_ptr<ge::gl::Program> basicMaterialProgram;
     GLint workGroupSizeExt[3];
     std::unique_ptr<ge::gl::Program> extRayProgram;
+    GLint workGroupSizeSha[3];
     std::unique_ptr<ge::gl::Program> shadRayProgram;
+
     std::unique_ptr<ge::gl::Program> basicDrawProgram;
 };

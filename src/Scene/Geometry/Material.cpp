@@ -67,3 +67,8 @@ std::vector<Material>& Material::getMaterials()
 {
     return materials;
 }
+
+Material* Material::getMaterial(int index)
+{
+    return &materials[index];
+}

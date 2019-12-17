@@ -10,3 +10,5 @@ CTestTestfile.cmake
 .vs
 out/
 CMakeSettings.json
+*.docx
+README.txt

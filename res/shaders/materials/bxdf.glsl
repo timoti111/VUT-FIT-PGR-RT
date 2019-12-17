@@ -35,41 +35,20 @@ vec4 bxdfEval(
 	RayHit hit,
 	Material material,
 	vec4 dirIn,
-	vec4 dirOut)
+	vec4 dirOut,
+    inout float pdfW)
 {
 	switch(material.type)
 	{
 		case BXDF_DIFFUSE:
-			return evalDiffuse(hit, material, dirIn, dirOut);
+			return evalDiffuse(hit, material, pdfW);
 		case BXDF_IDEAL_REFLECTION:
-			return evalIdealReflection();
+			return evalIdealReflection(pdfW);
 		case BXDF_IDEAL_DIELECTRIC:
-			return evalIdealDielectric();
+			return evalIdealDielectric(pdfW);
 		case BXDF_EMISSIVE:
-			return vec4(1.0f, 1.0f, 1.0f, 0.0f);
+			return evalEmissive(pdfW);
 	}
 	
 	return vec4(0.0f, 0.0f, 0.0f, 0.0f);
-}
-
-// Get pdf given incoming, outgoing directions (mainly for MIS)
-float bxdfPdf(
-	RayHit hit,
-	Material material,
-	vec4 dirIn,
-	vec4 dirOut)
-{
-	switch(material.type)
-	{
-		case BXDF_DIFFUSE:
-			return pdfDiffuse(hit, dirOut);
-		case BXDF_IDEAL_REFLECTION:
-			return pdfIdealReflection();
-		case BXDF_IDEAL_DIELECTRIC:
-			return pdfIdealDielectric();
-		case BXDF_EMISSIVE:
-			return 0.0f;
-	}
-
-	return 0.0f;
 }

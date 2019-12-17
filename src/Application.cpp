@@ -12,7 +12,6 @@ Application::Application()
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     window = glfwCreateWindow(width, height, "RayTracedChess", NULL, NULL);
     if (window == nullptr)
@@ -25,17 +24,6 @@ Application::Application()
 
     ge::gl::init((ge::gl::GET_PROC_ADDRESS)glfwGetProcAddress);
     ge::gl::setHighDebugMessage();
-
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-
-    // Setup Dear ImGui style
-    ImGui::StyleColorsDark();
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 460");
-
-    io.Fonts->AddFontFromFileTTF("res/fonts/Roboto-Medium.ttf", 16.0f);
 
     glViewport(0, 0, width, height);
 }
@@ -64,6 +52,17 @@ void Application::start()
     GLFWkeyfun f5 = static_cast<GLFWkeyfun>(Callback<void(GLFWwindow*, int, int, int, int)>::callback);
     glfwSetKeyCallback(window, f5);
 
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 460");
+
+    io.Fonts->AddFontFromFileTTF("res/fonts/Roboto-Medium.ttf", 16.0f);
+
     init();
     while (!glfwWindowShouldClose(window))
     {
@@ -76,8 +75,8 @@ void Application::start()
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        glfwPollEvents();
         draw();
+        glfwPollEvents();
     }
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();

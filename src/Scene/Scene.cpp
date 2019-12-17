@@ -5,11 +5,14 @@
 
 Scene::Scene() : BVH(4)
 {
-    
     auto selectedPieceMaterial = Material::generateNewMaterial(selectedObjectMaterial);
     selectedPieceMaterial->Ke = glm::vec4(0.0f, 0.5f, 1.0f, 0.0f);
     selectedPieceMaterial->type = EMISSIVE;
     drawableMaterials.emplace(std::make_pair(std::string("Selection Box Material"), selectedObjectMaterial));
+    lights.setLightsUpdatedCallback([=]()
+    {
+        sceneUpdatedCallback(true);
+    });
 }
 
 void Scene::addShape(std::shared_ptr<Geometry::Shape> shape)
@@ -54,7 +57,9 @@ void Scene::removeShape(std::string meshName)
 void Scene::selectMesh(Ray& ray)
 {
     Geometry::MeshInstance* oldSelectedMesh = actualSelectedMesh;
-    actualSelectedMesh = ray.traceRay(this, false);
+    actualSelectedMesh = ray.traceRay(this);
+    if (lights.tryToSelect(ray))
+        actualSelectedMesh = nullptr;
     if (actualSelectedMesh != oldSelectedMesh)
     {
         updateSelectedMesh = true;
@@ -167,7 +172,56 @@ void Scene::drawMaterialSettings()
         sceneUpdatedCallback(true);
 }
 
+void Scene::drawLightSettings()
+{
+    lights.drawSelectedLight();
+}
+
+void Scene::addLight()
+{
+    lights.addLight();
+}
+
 void Scene::createSelectedObjectShape()
+{
+    if (actualSelectedMesh == nullptr)
+        return;
+
+    float radius = 0.01f;
+    AABB meshAABB = actualSelectedMesh->getAABB();
+    std::vector<glm::vec3> p;
+    p.push_back(glm::vec3(meshAABB.min));
+    p.push_back(glm::vec3(meshAABB.max.x, meshAABB.min.y, meshAABB.min.z));
+    p.push_back(glm::vec3(meshAABB.max.x, meshAABB.min.y, meshAABB.max.z));
+    p.push_back(glm::vec3(meshAABB.min.x, meshAABB.min.y, meshAABB.max.z));
+    p.push_back(glm::vec3(meshAABB.min.x, meshAABB.max.y, meshAABB.min.z));
+    p.push_back(glm::vec3(meshAABB.max.x, meshAABB.max.y, meshAABB.min.z));
+    p.push_back(glm::vec3(meshAABB.max.x, meshAABB.max.y, meshAABB.max.z));
+    p.push_back(glm::vec3(meshAABB.min.x, meshAABB.max.y, meshAABB.max.z));
+    glm::vec3 lastBotPoint = p.at(3);
+    glm::vec3 lastTopPoint = p.at(7);
+
+    auto shape = std::make_shared<Geometry::Shape>();
+    shape->name = "SelectedObject";
+    Geometry::Mesh mesh(shape);
+    mesh.name = "Unnamed";
+
+    for (int i = 0; i < 4; i++)
+    {
+        mesh.cylinders.push_back(Geometry::Cylinder(p.at(i), lastBotPoint, radius));
+        mesh.cylinders.push_back(Geometry::Cylinder(p.at(i + 4), lastTopPoint, radius));
+        mesh.cylinders.push_back(Geometry::Cylinder(p.at(i), p.at(i + 4), radius));
+        mesh.spheres.push_back(Geometry::Sphere(lastBotPoint, radius));
+        mesh.spheres.push_back(Geometry::Sphere(lastTopPoint, radius));
+
+        lastBotPoint = p.at(i);
+        lastTopPoint = p.at(i + 4);
+    }
+    shape->meshes.push_back(mesh);
+    shapes.push_back(shape);
+}
+
+void Scene::createLightShape()
 {
     if (actualSelectedMesh == nullptr)
         return;

@@ -79,37 +79,31 @@ struct PathState
 {
     vec4 orig;
     vec4 dir;
+    vec4 hitP;
+    vec4 hitN;
     vec4 shadowOrig;
     vec4 shadowDir;
     vec4 T;
-    vec4 Ei;
-    vec4 lastBsdf;
-    vec4 lastEmission;
     vec4 lastT;
-    bool shadowRayBlocked;
-    float shadowRayLen;
-    bool lastSpecular; // prevents NEE
-    // Previously evaluated light sample
-    float lastPdfW; // prev. brdf pdf, for MIS (implicit light samples)
-    float lastPdfDirect;    // pdfW of sampled NEE sample
-    float lastPdfImplicit;  // pdfW of implicit NEE sample
-    float lastCosTh;
-    float lastLightPickProb;
-    
+    vec4 Ei;
+    vec4 lastBsdfDirect;
+    vec4 lastEmission;
     ivec2 pixelIndex;
-    uint seed;
-    bool firstDiffuseHit;
-
-
-    vec4 hitP;
-    vec4 hitN;
     vec2 hitUV;
     float t;
-    int matID;    // index of hit material
-    int triIndex;    
-    uint pathLen; // number of segments in path
-        // index of hit triangle, -1 by default
+    int matID;
+    int triIndex;
+    float maxShadowRayLen;
+    bool shadowRayBlocked;
     bool lightHit;
+    bool lastSpecular;
+    float lastPdfDirect;
+    float lastCosThDirect;
+    float lastPdfIndirect;
+    float lastLightPickProb;
+    uint seed;
+    uint pathLen;
+    int pad[3];
 };
 
 struct RenderParameters
@@ -118,9 +112,12 @@ struct RenderParameters
     vec4 backgroundColor;
     float backgroundIntensity;
     int maxBounces;
+    bool sampleDirect;
+    bool sampleIndirect;
     bool useEnvironmentMap;
     bool useRussianRoulette;
     uint environmentMapTextureID;
+    uint numberOfLights;
 };
 
 struct QueueLengths
@@ -142,4 +139,10 @@ struct Material
     int map_Ks; // specular texture descriptor idx
     int map_N;  // normal texture descriptor idx
     int type;   // BXDF type, defined in bxdf.cl
+};
+
+struct Light
+{
+    vec4 sphere;
+    int materialID;
 };

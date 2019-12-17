@@ -2,10 +2,11 @@
 #include "Board.h"
 #include <imgui.h>
 
-Chess::Piece::Piece(Board* board, int color, std::shared_ptr<Geometry::MeshInstance> instance) :
-    board(board), color(static_cast<Color>(color)), instance(instance)
+Chess::Piece::Piece(Board* board, int materialID, Color color, std::shared_ptr<Geometry::MeshInstance> instance) :
+    board(board), color(color), instance(instance)
 {
-    instance->setMaterialID(color);
+    instance->setMaterialID(materialID);
+    name = instance->parent->name;
 }
 
 bool Chess::Piece::placeAt(std::string index)
@@ -31,7 +32,6 @@ bool Chess::Piece::drawGui()
     bool ret = false;
     int rowLast = row;
     int colLast = col;
-    std::string name = instance->parent->name;
     ImGui::Begin((name + " Settings").c_str());
     ImGui::Text("Board position:");
     ImGui::Combo("Col", &col, cols, IM_ARRAYSIZE(cols));
@@ -66,4 +66,9 @@ Chess::Piece::Color Chess::Piece::getColor()
 std::string Chess::Piece::getIndex()
 {
     return Board::indexToString(col, row);
+}
+
+std::string Chess::Piece::getName()
+{
+    return name;
 }

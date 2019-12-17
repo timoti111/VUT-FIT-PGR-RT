@@ -37,7 +37,7 @@ vec4 sampleIdealDielectric(RayHit hit, Material material, vec4 dirIn, inout vec4
     float fr = fresnelDielectric(cosI, n1, n2);
     if (rand(randSeed) < fr)
     {
-//         Reflection
+//      Reflection
         dirOut = reflect(dirIn, hit.normal);
     }
     else
@@ -45,14 +45,14 @@ vec4 sampleIdealDielectric(RayHit hit, Material material, vec4 dirIn, inout vec4
         // Refraction
         dirOut = refract(dirIn, hit.normal, eta);
         bsdf *= eta * eta; // eta^2 applied in case of radiance transport (16.1.3)
-		
+
         // Simulate absorption
 //        vec4 Ks = matGetFloat3(material->Ks, hit->uvTex, material->map_Ks, textures, texData);
         vec4 Ks = material.Ks;
         bsdf *= Ks;
     }
 
-    // (1-fr) or (fr) in pdf and BSDF cancel out
+//    // (1-fr) or (fr) in pdf and BSDF cancel out
     pdfW = 1.0f;
 
     dirOut = normalize(dirOut);
@@ -64,13 +64,8 @@ vec4 sampleIdealDielectric(RayHit hit, Material material, vec4 dirIn, inout vec4
 }
 
 // BSDF (dirac delta) is non-zero with zero probability for two given directions
-vec4 evalIdealDielectric()
+vec4 evalIdealDielectric(inout float pdf)
 {
+    pdf = 0.0f;
     return vec4(0.0f);
-}
-
-// Probability of supplying a correct refl/refr direction pair is zero
-float pdfIdealDielectric()
-{
-    return 0.0f;
 }
