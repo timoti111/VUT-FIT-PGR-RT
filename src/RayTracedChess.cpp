@@ -107,26 +107,19 @@ void RayTracedChess::draw()
     static float WGSizeInvExt = 1.0f / workGroupSizeExt[0];
     static float WGSizeInvSha = 1.0f / workGroupSizeSha[0];
     static auto renderParamsBuffer = vars.get<ge::gl::Buffer>("renderParamsBuffer");
-    static unsigned iteration = 0;
     static RenderParameters actualRenderParameters;
 
     if (!drawGuiB)
         checkKeys();
+
+    int advanceBy = 1;
 
     if (resetRender)
     {
         actualRenderParameters = renderInfo.renderParams;
         renderParamsBuffer->setData(&actualRenderParameters, sizeof(RenderParameters));
         resetRender = false;
-        iteration = 0;
-    }
-
-    int advanceBy = 1;
-
-    if (iteration < 2)
-    {
         advanceBy = (int)std::ceil((2 * width * height) / (float)pathAlive);
-
         resetProgram->dispatch((int)ceil(std::max(pathAlive, width * height) * WGSizeInvRes), 1, 1);
         newPathProgram->dispatch((int)ceil(pathAlive * WGSizeInvNew), 1, 1);
         extRayProgram->dispatch((int)ceil(pathAlive * WGSizeInvExt), 1, 1);
@@ -149,7 +142,6 @@ void RayTracedChess::draw()
 
     drawGui(drawGuiB);
     swap();
-    iteration++;
 }
 
 void RayTracedChess::mouseButtonEvent(int button, int action, int mods)

@@ -53,7 +53,6 @@ std::shared_ptr<Geometry::Shape> Geometry::Shape::fromObjFile(std::string path, 
             std::vector<unsigned char> image; //the raw pixels
             unsigned width, height;
             unsigned error = lodepng::decode(image, width, height, dir + material.normal_texname);
-            std::cout << image.size() << " " << material.normal_texname << " " << width << " x " << height << std::endl;
 
             //if there's an error, display it
             if (error) std::cout << "decoder error " << error << ": " << lodepng_error_text(error) << std::endl;
@@ -63,11 +62,6 @@ std::shared_ptr<Geometry::Shape> Geometry::Shape::fromObjFile(std::string path, 
             texture->texParameteri(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             newMaterial->map_N = Textures::addTexture(texture);
         }
-        //newMaterial->type = IDEAL_REFLECTION;
-        //newMaterial.map_Kd = generateTexture(dir + material.diffuse_texname);
-        //newMaterial.map_N = generateTexture(dir + material.diffuse_texname);
-        //shapeInternal->materials.push_back(newMaterial);
-        //shapeInternal->materialIDs.push_back(Material::getNextMaterialID());
     }
     shapeInternal->name = name;
     for (auto& shape : shapes)

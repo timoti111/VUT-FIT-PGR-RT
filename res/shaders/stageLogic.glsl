@@ -139,5 +139,3 @@ void main()
     uint index = atomicWarpAdd(MATERIAL_QUEUE, 1);
     materialQueue[index] = globalInvocationID;
 }
-
-
