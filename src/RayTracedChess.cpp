@@ -18,7 +18,6 @@
 
 RayTracedChess::RayTracedChess() : Application(), scene("res/models/chess/board2/", "res/models/chess/set1/")
 {
-    // TODO ADD DYNAMIC DEFINES
     std::cout << "Compiling reset shader" << std::endl;
     resetProgram = std::make_unique<ge::gl::Program>(
         std::make_shared<ge::gl::Shader>(GL_COMPUTE_SHADER, Shadinclude::load("res/shaders/stageResetRender.glsl")));
@@ -56,17 +55,6 @@ RayTracedChess::RayTracedChess() : Application(), scene("res/models/chess/board2
     renderInfo.renderParams.environmentMapTextureID = Textures::addTexture(texture);
 
     initComputeShaderImage();
-
-    //scene.addShape(Geometry::Shape::fromObjFile("res/models/cryteksponza/sponza.obj", "Sponza"));
-    //scene.instantiateShape("Sponza");
-    //int materialID;
-    //auto dragonMaterial = Material::generateNewMaterial(materialID);
-    //scene.drawableMaterials.emplace(std::make_pair(std::string("Dragon"), materialID));
-    //scene.instantiateShape("Dragon", materialID);
-    //Material::generateNewMaterial(materialID);
-    //scene.addShape(Geometry::Shape::fromObjFile("res/models/chess/board2/Board.obj", "Board"));
-    //scene.instantiateShape("Board", materialID);
-    //std::cout << logicProgram->getUniformLocation("destTex") << std::endl;
 
     vars.reCreate<ge::gl::Buffer>("pathsDataBuffer", (4 + 1 + 4 * pathAlive + 64 * pathAlive) * sizeof(unsigned) + 3)->bindBase(GL_SHADER_STORAGE_BUFFER, logicProgram->getBufferBinding("PathsDataBuffer"));
     vars.reCreate<ge::gl::Buffer>("renderParamsBuffer", sizeof(RenderParameters))->bindBase(GL_UNIFORM_BUFFER, 1);
@@ -137,7 +125,6 @@ void RayTracedChess::draw()
 
     if (iteration < 2)
     {
-        //if (iteration == 0)
         advanceBy = (int)std::ceil((2 * width * height) / (float)pathAlive);
 
         resetProgram->dispatch((int)ceil(std::max(pathAlive, width * height) * WGSizeInvRes), 1, 1);
@@ -185,17 +172,6 @@ void RayTracedChess::mouseButtonEvent(int button, int action, int mods)
         if (ray.t != std::numeric_limits<float>::max())
             renderInfo.setFocusDistance(ray.t);
     }
-}
-
-void RayTracedChess::mouseScrollEvent(double xoffset, double yoffset)
-{
-    if (drawGuiB)
-        return;
-
-    //if (yoffset > 0)
-    //    speedMultiplier *= 1.5;
-    //if (yoffset < 0)
-    //    speedMultiplier /= 1.5;
 }
 
 void RayTracedChess::mouseMoveEvent(double xpos, double ypos)

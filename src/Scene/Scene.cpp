@@ -8,6 +8,7 @@ Scene::Scene() : BVH(4)
     auto selectedPieceMaterial = Material::generateNewMaterial(selectedObjectMaterial);
     selectedPieceMaterial->Ke = glm::vec4(0.0f, 0.5f, 1.0f, 0.0f);
     selectedPieceMaterial->type = EMISSIVE;
+    selectedPieceMaterial->Ns = 10.0f;
     drawableMaterials.emplace(std::make_pair(std::string("Selection Box Material"), selectedObjectMaterial));
     lights.setLightsUpdatedCallback([=]()
     {

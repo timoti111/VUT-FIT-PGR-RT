@@ -12,7 +12,6 @@ public:
 
     void draw() override;
     void mouseButtonEvent(int button, int action, int mods) override;
-    void mouseScrollEvent(double xoffset, double yoffset) override;
     void mouseMoveEvent(double xpos, double ypos) override;
     void keyEvent(int key, int scancode, int action, int mods) override;
     void resizeEvent(int width, int height) override;

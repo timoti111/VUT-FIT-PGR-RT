@@ -40,18 +40,10 @@ void main()
             float pdfIndirect = pathStates[globalInvocationID].lastPdfIndirect;
             float cosThDirect = pathStates[globalInvocationID].lastCosThDirect;
             float lightPickProb = pathStates[globalInvocationID].lastLightPickProb;
-
-            // Only do MIS weighting if other samplers (bsdf-sampling) could have generated the sample
-            float weight = 1.0f;
-//            if (renderParameters.sampleIndirect)
-//                weight = (pdfDirect * lightPickProb) / (pdfDirect * lightPickProb + pdfIndirect);
-
+            float maxDistance = pathStates[globalInvocationID].maxShadowRayLen;
             vec4 lastT = pathStates[globalInvocationID].lastT;
-            vec4 contribution = bsdfDirect * emission * weight * cosThDirect / (lightPickProb * pdfDirect);
+            vec4 contribution = bsdfDirect * emission * cosThDirect / (lightPickProb * pdfDirect + pdfIndirect);
             pathStates[globalInvocationID].Ei += lastT * contribution;
-//            vec4 indirectContrib = T / lastT;
-//            T = ((indirectContrib + contribution) / 2) * lastT;
-//            pathStates[globalInvocationID].T = T;
             pathStates[globalInvocationID].shadowRayBlocked = true;
             newEiWritten = true;
         }
@@ -62,20 +54,17 @@ void main()
         bool lastSpecular = pathStates[globalInvocationID].lastSpecular;
         vec4 bg = vec4(0.0f);
 
-        if (renderParameters.sampleIndirect)
+        if (renderParameters.useEnvironmentMap)
         {
-            if (renderParameters.useEnvironmentMap)
-            {
-                if (lastSpecular || pathLen == 1)
-                    bg = sampleEnviroment(renderParameters.environmentMapTextureID, ray.direction, 0.0f);
-                else
-                    bg = sampleEnviroment(renderParameters.environmentMapTextureID, ray.direction, 7.0f);
-            }
+            if (lastSpecular || pathLen == 1)
+                bg = sampleEnviroment(renderParameters.environmentMapTextureID, ray.direction, 0.0f);
             else
-                bg = renderParameters.backgroundColor;
-            bg = bg * T * renderParameters.backgroundIntensity;
+                bg = sampleEnviroment(renderParameters.environmentMapTextureID, ray.direction, 7.0f);
         }
-        pathStates[globalInvocationID].Ei += bg;
+        else
+            bg = renderParameters.backgroundColor;
+
+        pathStates[globalInvocationID].Ei += bg * T * renderParameters.backgroundIntensity;
         newEiWritten = true;
         terminated = true;
     }
@@ -87,8 +76,9 @@ void main()
         float weight = 1.0f;
         Material mat = materials[hit.matID];
         vec4 emission = mat.Ke * mat.Ns * INVPI;
-//        if (renderParameters.sampleDirect)
-//            weight = pdfIndirect / (pdfDirect * lightPickProb + pdfIndirect);
+        float maxDistance = pathStates[globalInvocationID].maxShadowRayLen;
+        if (renderParameters.sampleDirect)
+            weight = pdfIndirect / (pdfDirect * lightPickProb + pdfIndirect);
         pathStates[globalInvocationID].Ei += T * weight * emission;
         newEiWritten = true;
         terminated = true;
@@ -99,7 +89,6 @@ void main()
         // Russian roulette
         if (terminated && renderParameters.useRussianRoulette)
         {
-//            float contProb = clamp(max3(T.xyz), 0.01f, 0.5f);
             float contProb = max3(T.xyz);
             terminated = (rand(pathStates[globalInvocationID].seed) > contProb);
             T /= contProb;
@@ -137,13 +126,13 @@ void main()
             vec4 lightPos = smapleLightSurface(light, hit.position, lightNormal, pathStates[globalInvocationID].seed);
             vec4 fromHitToLight = lightPos - hit.position;
             float maxShadowLen = length(fromHitToLight) * 0.999f;
-            pathStates[globalInvocationID].maxShadowRayLen = length(fromHitToLight) * 0.999f;
+            pathStates[globalInvocationID].maxShadowRayLen = maxShadowLen;
             fromHitToLight = normalize(fromHitToLight);
             pathStates[globalInvocationID].shadowDir = fromHitToLight;
             pathStates[globalInvocationID].shadowOrig = hit.position + 1e-4f * fromHitToLight;
+            pathStates[globalInvocationID].lastPdfDirect = pow(maxShadowLen, 2) / (4.0f * PI * pow(light.sphere.w, 2));
             pathStates[globalInvocationID].lastEmission = mat.Ke * mat.Ns * INVPI;
-//            pathStates[globalInvocationID].lastLightPickProb = SPHERE_PDF;
-//            pathStates[pathIndex].lastPdfDirect = SPHERE_PDF * pow(maxShadowLen, 2) / abs(dot(lightNormal, fromHitToLight));
+            pathStates[globalInvocationID].lastLightPickProb = pickProbability;
         }
     }
     

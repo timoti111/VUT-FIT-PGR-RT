@@ -113,7 +113,6 @@ struct RenderParameters
     float backgroundIntensity;
     int maxBounces;
     bool sampleDirect;
-    bool sampleIndirect;
     bool useEnvironmentMap;
     bool useRussianRoulette;
     uint environmentMapTextureID;

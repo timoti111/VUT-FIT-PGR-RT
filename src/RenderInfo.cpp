@@ -20,7 +20,6 @@ RenderInfo::RenderInfo()
     renderParams.useEnvironmentMap = true;
     renderParams.useRussianRoulette = true;
     renderParams.sampleDirect = true;
-    renderParams.sampleIndirect = true;
     renderParams.numberOfLights = 0;
     previewBounces = 2;
     setFov(90.0f);
@@ -128,7 +127,6 @@ void RenderInfo::drawGui()
     bool useEnvironmentMap = renderParams.useEnvironmentMap;
     bool useRussianRoulette = renderParams.useRussianRoulette;
     bool sampleDirect = renderParams.sampleDirect;
-    bool sampleIndirect = renderParams.sampleIndirect;
     bool changed = false;
 
     ImGui::Begin("Render Settings");
@@ -136,13 +134,12 @@ void RenderInfo::drawGui()
     changed |= ImGui::InputInt("bounces", &renderParams.maxBounces);
     changed |= ImGui::Checkbox("Use russian roulette", &useRussianRoulette);
     changed |= ImGui::Checkbox("Sample direct light", &sampleDirect);
-    changed |= ImGui::Checkbox("Sample indirect light", &sampleIndirect);
     if (ImGui::CollapsingHeader("Background settings"))
     {
         changed |= ImGui::ColorEdit3("Background color", &renderParams.backgroundColor.x);
         changed |= ImGui::Checkbox("Use environment map", &useEnvironmentMap);
         ImGui::Text("Background Intensity");
-        changed |= ImGui::SliderFloat("", &renderParams.backgroundIntensity, 0.1f, 100.0f);
+        changed |= ImGui::SliderFloat("", &renderParams.backgroundIntensity, 0.0f, 100.0f);
     }
     if (ImGui::CollapsingHeader("Camera settings"))
     {
@@ -161,7 +158,6 @@ void RenderInfo::drawGui()
     renderParams.useEnvironmentMap = useEnvironmentMap;
     renderParams.useRussianRoulette = useRussianRoulette;
     renderParams.sampleDirect = sampleDirect;
-    renderParams.sampleIndirect = sampleIndirect;
 
     if (changed)
         paramsUpdatedCallback();

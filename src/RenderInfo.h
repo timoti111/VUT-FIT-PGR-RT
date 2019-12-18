@@ -20,7 +20,6 @@ struct alignas(16) RenderParameters
     float backgroundIntensity;
     int maxBounces;
     unsigned sampleDirect;
-    unsigned sampleIndirect;
     unsigned useEnvironmentMap;
     unsigned useRussianRoulette;
     unsigned environmentMapTextureID;

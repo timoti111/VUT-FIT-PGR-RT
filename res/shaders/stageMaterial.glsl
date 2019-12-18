@@ -46,7 +46,7 @@ void main()
         vec4 lightIn = pathStates[pathIndex].shadowDir;
         pdfDirect;
         bsdfDirect = bxdfEval(hit, mat, dirOut, lightIn, pdfDirect);
-        pathStates[pathIndex].lastPdfDirect = pdfDirect;
+        pathStates[pathIndex].lastPdfDirect *= pdfDirect;
         pathStates[pathIndex].lastBsdfDirect = bsdfDirect;
         pathStates[pathIndex].lastCosThDirect = abs(dot(hit.normal, lightIn));
     }
