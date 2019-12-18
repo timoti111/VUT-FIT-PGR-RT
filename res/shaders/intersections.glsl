@@ -111,12 +111,12 @@ bool IntersectLights(Ray ray, bool occlusion, inout RayHit bestHit)
     for (uint i = 0; i < renderParameters.numberOfLights; i++)
     {
         Light light = lights[i];
-        hit = hit || IntersectSphere(ray, light.sphere, bestHit);
-        if (hit)
+        if (IntersectSphere(ray, light.sphere, bestHit))
         {
             if (occlusion)
                 return true;
             bestHit.matID = light.materialID;
+            hit = true;
         }
     }
     return hit;

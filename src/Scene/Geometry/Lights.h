@@ -25,10 +25,7 @@ public:
     std::vector<Light> lights;
 
 private:
-    //bool objectSelected = false;
-    //std::map<std::string, int> lightMaterials;
     std::function<void()> lightsUpdatedCallback = [](){};
-    //std::vector<Light>::iterator selectedLight;
     int selectedLightIndex = -1;
     std::vector<Light> hiddenLights;
     bool intersectLight(Ray& ray, Light& light);

@@ -29,10 +29,6 @@ void main()
     bool terminated = false;
     bool newEiWritten = false;
 
-//    Material material = materials[pathStates[globalInvocationID].matID];
-//    pathStates[globalInvocationID].Ei += material.Ke;
-//    terminated = true;
-
     if (renderParameters.sampleDirect)
     {
         bool blocked = pathStates[globalInvocationID].shadowRayBlocked;
@@ -89,7 +85,7 @@ void main()
         float pdfDirect = pathStates[globalInvocationID].lastPdfDirect;
         float pdfIndirect = pathStates[globalInvocationID].lastPdfIndirect;
         float weight = 1.0f;
-        Material mat = materials[pathStates[globalInvocationID].matID];
+        Material mat = materials[hit.matID];
         vec4 emission = mat.Ke * mat.Ns * INVPI;
 //        if (renderParameters.sampleDirect)
 //            weight = pdfIndirect / (pdfDirect * lightPickProb + pdfIndirect);
@@ -146,7 +142,7 @@ void main()
             pathStates[globalInvocationID].shadowDir = fromHitToLight;
             pathStates[globalInvocationID].shadowOrig = hit.position + 1e-4f * fromHitToLight;
             pathStates[globalInvocationID].lastEmission = mat.Ke * mat.Ns * INVPI;
-            pathStates[globalInvocationID].lastLightPickProb = SPHERE_PDF;
+//            pathStates[globalInvocationID].lastLightPickProb = SPHERE_PDF;
 //            pathStates[pathIndex].lastPdfDirect = SPHERE_PDF * pow(maxShadowLen, 2) / abs(dot(lightNormal, fromHitToLight));
         }
     }
