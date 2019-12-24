@@ -7,10 +7,10 @@
 
 RenderInfo::RenderInfo()
 {
-    renderParams.camera.position = glm::vec4(0.0f, 2.0f, 4.0f, 1.0f);
-    renderParams.camera.direction = glm::vec4(0.0f, 0.0f, -1.0f, 0.0f);
+    renderParams.camera.position = glm::vec4(7.8f, 3.0f, 0.0f, 1.0f);
+    renderParams.camera.direction = glm::vec4(-1.0f, 0.0f, 0.0f, 0.0f);
     renderParams.camera.up = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
-    renderParams.camera.left = glm::vec4(-1.0f, 0.0f, 0.0f, 0.0f);
+    renderParams.camera.left = glm::vec4(0.0f, 0.0f, 1.0f, 0.0f);
     rotation = glm::vec2(0.0f, 0.0f);
     renderParams.camera.aperture = 0.0f;
     renderParams.camera.focusDistance = 1.0f;

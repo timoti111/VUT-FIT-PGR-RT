@@ -41,7 +41,7 @@ vec4 bxdfEval(
 	switch(material.type)
 	{
 		case BXDF_DIFFUSE:
-			return evalDiffuse(hit, material, pdfW);
+			return evalDiffuse(hit, material, dirOut, pdfW);
 		case BXDF_IDEAL_REFLECTION:
 			return evalIdealReflection(pdfW);
 		case BXDF_IDEAL_DIELECTRIC:

@@ -33,7 +33,7 @@ private:
     RenderInfo renderInfo;
     HDRLoaderResult backgroundTexture;
     double firstMouse = true;
-    const int pathAlive = 1 << 19;
+    const int pathAlive = 2 << 18;
 
     GLint workGroupSizeRes[3];
     std::unique_ptr<ge::gl::Program> resetProgram;

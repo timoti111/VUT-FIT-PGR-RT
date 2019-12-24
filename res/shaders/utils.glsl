@@ -175,12 +175,13 @@ uint atomicWarpAdd(uint counterIndex, int number)
     return res + bitCount(mask & ((1 << gl_SubGroupInvocationARB) - 1));
 }
 
-vec4 smapleLightSurface(Light light, vec4 hitPosition, inout vec4 normal, inout uint seed)
+vec4 smapleLightSurface(Light light, vec4 hitPosition, inout float pdf, inout uint seed)
 {
     vec4 lightPos = vec4(light.sphere.xyz, 1.0f);
-    vec4 lightHitNormal = hitPosition - lightPos;
-    normal = cosSampleHemisphere(lightHitNormal, seed) * light.sphere.w;
-    return lightPos + normal;
+    vec4 lightHitDir = hitPosition - lightPos;
+    vec4 normal = cosSampleHemisphere(lightHitDir, seed);
+    pdf = dot(lightHitDir, normal) * INVPI;
+    return lightPos + normal * light.sphere.w;
 }
 
 

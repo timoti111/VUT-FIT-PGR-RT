@@ -28,10 +28,9 @@ void main()
     uint pathLen = pathStates[globalInvocationID].pathLen;
     bool terminated = false;
     bool newEiWritten = false;
-
+    bool blocked = pathStates[globalInvocationID].shadowRayBlocked;
     if (renderParameters.sampleDirect)
     {
-        bool blocked = pathStates[globalInvocationID].shadowRayBlocked;
         if (!blocked)
         {
             vec4 emission = pathStates[globalInvocationID].lastEmission;
@@ -77,7 +76,7 @@ void main()
         Material mat = materials[hit.matID];
         vec4 emission = mat.Ke * mat.Ns * INVPI;
         float maxDistance = pathStates[globalInvocationID].maxShadowRayLen;
-        if (renderParameters.sampleDirect)
+        if (!blocked)
             weight = pdfIndirect / (pdfDirect * lightPickProb + pdfIndirect);
         pathStates[globalInvocationID].Ei += T * weight * emission;
         newEiWritten = true;
@@ -122,15 +121,16 @@ void main()
             int lightIndex = int(floor(randomPick / pickProbability));
             Light light = lights[lightIndex];
             Material mat = materials[light.materialID];
-            vec4 lightNormal;
-            vec4 lightPos = smapleLightSurface(light, hit.position, lightNormal, pathStates[globalInvocationID].seed);
+            float pdf;
+            vec4 lightPos = smapleLightSurface(light, hit.position, pdf, pathStates[globalInvocationID].seed);
             vec4 fromHitToLight = lightPos - hit.position;
             float maxShadowLen = length(fromHitToLight) * 0.999f;
             pathStates[globalInvocationID].maxShadowRayLen = maxShadowLen;
             fromHitToLight = normalize(fromHitToLight);
             pathStates[globalInvocationID].shadowDir = fromHitToLight;
             pathStates[globalInvocationID].shadowOrig = hit.position + 1e-4f * fromHitToLight;
-            pathStates[globalInvocationID].lastPdfDirect = pow(maxShadowLen, 2) / (4.0f * PI * pow(light.sphere.w, 2));
+//            pathStates[globalInvocationID].lastPdfDirect = 0.2387324146378 * pow(maxShadowLen, 2) / (abs(dot(fromHitToLight, normal)) * 0.5f * INVPI);//pow(maxShadowLen, 2) / (pdf * 4.0f * PI * pow(light.sphere.w, 2));
+            pathStates[globalInvocationID].lastPdfDirect = pow(maxShadowLen, 2) / (pdf * 4.0f * PI * pow(light.sphere.w, 2));
             pathStates[globalInvocationID].lastEmission = mat.Ke * mat.Ns * INVPI;
             pathStates[globalInvocationID].lastLightPickProb = pickProbability;
         }

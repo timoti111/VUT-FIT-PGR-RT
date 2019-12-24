@@ -9,9 +9,9 @@ vec4 sampleDiffuse(RayHit hit, Material mat, inout vec4 dirOut, inout float pdfW
 	return Kd * INVPI;
 }
 
-vec4 evalDiffuse(RayHit hit, Material mat, inout float pdf)
+vec4 evalDiffuse(RayHit hit, Material mat, inout vec4 dirOut, inout float pdf)
 {
-    pdf = HEMISPHERE_PDF;
+    pdf = dot(hit.normal, dirOut) >= 1e-4f ? HEMISPHERE_PDF : 0.0f;
     vec4 Kd = readMaterial(mat.Kd, hit.uv, mat.map_Kd);
     return Kd * INVPI;
 }
