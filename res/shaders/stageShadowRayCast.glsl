@@ -14,7 +14,7 @@ void main()
         return;
 
     uint pathIndex = shadowRayQueue[globalInvocationID];
-    Ray ray = CreateRay(pathStates[pathIndex].shadowOrig, pathStates[pathIndex].shadowDir);
-    RayHit rayHit = EmptyHit(pathStates[pathIndex].maxShadowRayLen);
-    pathStates[pathIndex].shadowRayBlocked = IntersectScene4(ray, true, rayHit) || IntersectLights(ray, true, rayHit);
+    Ray ray = CreateRay(GetPathInfo(pathIndex, shadowOrig), GetPathInfo(pathIndex, shadowDir));
+    RayHit rayHit = EmptyHit(GetPathInfo(pathIndex, maxShadowRayLen));
+    SetPathInfo(pathIndex, shadowRayBlocked, IntersectScene4(ray, true, rayHit) || IntersectLights(ray, true, rayHit));
 }

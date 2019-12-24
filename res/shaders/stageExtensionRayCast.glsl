@@ -15,12 +15,12 @@ void main()
         return;
 
     uint pathIndex = extensionRayQueue[globalInvocationID];
-    Ray ray = CreateRay(pathStates[pathIndex].orig, pathStates[pathIndex].dir);
+    Ray ray = CreateRay(GetPathInfo(pathIndex, orig), GetPathInfo(pathIndex, dir));
     RayHit rayHit = EmptyHit(FLT_MAX);
     IntersectScene4(ray, false, rayHit);
-    pathStates[pathIndex].lightHit = pathStates[pathIndex].lightHit || IntersectLights(ray, false, rayHit);
+    SetPathInfo(pathIndex, lightHit, IntersectLights(ray, false, rayHit));
     rayHit.position = ray.origin + rayHit.t * ray.direction;
     rayHit.normal = normalize(rayHit.normal);
     WriteHit(rayHit, pathIndex);
-    pathStates[pathIndex].pathLen++;
+    IncPathInfo(pathIndex, pathLen);
 }

@@ -62,23 +62,23 @@ RayHit EmptyHit(float t)
 RayHit ReadHit(uint pathIndex)
 {
     RayHit hit;
-    hit.position = pathStates[pathIndex].hitP;
-    hit.normal = pathStates[pathIndex].hitN;
-    hit.uv = pathStates[pathIndex].hitUV;
-    hit.t = pathStates[pathIndex].t;
-    hit.matID = pathStates[pathIndex].matID;
-    hit.triIndex = pathStates[pathIndex].triIndex;
+    hit.position = GetPathInfo(pathIndex, hitP);
+    hit.normal = GetPathInfo(pathIndex, hitN);
+    hit.uv = GetPathInfo(pathIndex, hitUV);
+    hit.t = GetPathInfo(pathIndex, t);
+    hit.matID = GetPathInfo(pathIndex, matID);
+    hit.triIndex = GetPathInfo(pathIndex, triIndex);
     return hit;
 };
 
 void WriteHit(RayHit hit, uint pathIndex)
 {
-    pathStates[pathIndex].hitP = hit.position;
-    pathStates[pathIndex].hitN = hit.normal;
-    pathStates[pathIndex].hitUV = hit.uv;
-    pathStates[pathIndex].t = hit.t;
-    pathStates[pathIndex].matID = hit.matID;
-    pathStates[pathIndex].triIndex = hit.triIndex;
+    SetPathInfo(pathIndex, hitP, hit.position);
+    SetPathInfo(pathIndex, hitN, hit.normal);
+    SetPathInfo(pathIndex, hitUV, hit.uv);
+    SetPathInfo(pathIndex, t, hit.t);
+    SetPathInfo(pathIndex, matID, hit.matID);
+    SetPathInfo(pathIndex, triIndex, hit.triIndex);
 };
 
 
@@ -183,5 +183,3 @@ vec4 smapleLightSurface(Light light, vec4 hitPosition, inout float pdf, inout ui
     pdf = dot(lightHitDir, normal) * INVPI;
     return lightPos + normal * light.sphere.w;
 }
-
-

@@ -23,7 +23,7 @@ void main()
 
     if (globalInvocationID >= NUM_PATHS)
         return;
-    pathStates[globalInvocationID].seed = globalInvocationID;
+    SetPathInfo(globalInvocationID, seed, globalInvocationID);
 
     newPathQueue[globalInvocationID] = globalInvocationID;
     if (globalInvocationID == 0)

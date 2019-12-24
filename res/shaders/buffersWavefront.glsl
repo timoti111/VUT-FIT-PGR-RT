@@ -18,8 +18,52 @@ layout(binding = 0) buffer PathsDataBuffer
     uint materialQueue[NUM_PATHS];
     uint extensionRayQueue[NUM_PATHS];
     uint shadowRayQueue[NUM_PATHS];
-    PathState pathStates[];
+    // AOS
+//    PathState pathStates[];
+    // SOA
+    vec4 orig[NUM_PATHS];
+    vec4 dir[NUM_PATHS];
+    vec4 hitP[NUM_PATHS];
+    vec4 hitN[NUM_PATHS];
+    vec4 shadowOrig[NUM_PATHS];
+    vec4 shadowDir[NUM_PATHS];
+    vec4 T[NUM_PATHS];
+    vec4 lastT[NUM_PATHS];
+    vec4 Ei[NUM_PATHS];
+    vec4 lastBsdfDirect[NUM_PATHS];
+    vec4 lastEmission[NUM_PATHS];
+    ivec2 pixelIndex[NUM_PATHS];
+    vec2 hitUV[NUM_PATHS];
+    float t[NUM_PATHS];
+    int matID[NUM_PATHS];
+    int triIndex[NUM_PATHS];
+    float maxShadowRayLen[NUM_PATHS];
+    bool shadowRayBlocked[NUM_PATHS];
+    bool lightHit[NUM_PATHS];
+    bool lastSpecular[NUM_PATHS];
+    float lastPdfDirect[NUM_PATHS];
+    float lastCosThDirect[NUM_PATHS];
+    float lastPdfIndirect[NUM_PATHS];
+    float lastLightPickProb[NUM_PATHS];
+    uint seed[NUM_PATHS];
+    uint pathLen[NUM_PATHS];
 };
+
+
+// AOS
+//#define GetPathInfo(index, name) pathStates[index].name
+//#define IncPathInfo(index, name) pathStates[index].name++
+//#define IncByPathInfo(index, name, value) pathStates[index].name += value
+//#define MulByPathInfo(index, name, value) pathStates[index].name *= value
+//#define SetPathInfo(index, name, value) pathStates[index].name = value
+
+// SOA
+#define GetPathInfo(index, name) name[index]
+#define IncPathInfo(index, name) name[index]++
+#define IncByPathInfo(index, name, value) name[index] += value
+#define MulByPathInfo(index, name, value) name[index] *= value
+#define SetPathInfo(index, name, value) name[index] = value
+
 layout(std430, binding = 1) buffer MaterialsBuffer
 {
     Material materials[];

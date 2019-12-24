@@ -23,34 +23,31 @@ void main()
         return;
 
     RayHit hit = ReadHit(globalInvocationID);
-    Ray ray = CreateRay(pathStates[globalInvocationID].orig, pathStates[globalInvocationID].dir);
-    vec4 T = pathStates[globalInvocationID].T;
-    uint pathLen = pathStates[globalInvocationID].pathLen;
+    Ray ray = CreateRay(GetPathInfo(globalInvocationID, orig), GetPathInfo(globalInvocationID, dir));
+    vec4 localT = GetPathInfo(globalInvocationID, T);
+    uint pathLen = GetPathInfo(globalInvocationID, pathLen);
     bool terminated = false;
-    bool newEiWritten = false;
-    bool blocked = pathStates[globalInvocationID].shadowRayBlocked;
+    bool blocked = GetPathInfo(globalInvocationID, shadowRayBlocked);
     if (renderParameters.sampleDirect)
     {
         if (!blocked)
         {
-            vec4 emission = pathStates[globalInvocationID].lastEmission;
-            vec4 bsdfDirect = pathStates[globalInvocationID].lastBsdfDirect;
-            float pdfDirect = pathStates[globalInvocationID].lastPdfDirect;
-            float pdfIndirect = pathStates[globalInvocationID].lastPdfIndirect;
-            float cosThDirect = pathStates[globalInvocationID].lastCosThDirect;
-            float lightPickProb = pathStates[globalInvocationID].lastLightPickProb;
-            float maxDistance = pathStates[globalInvocationID].maxShadowRayLen;
-            vec4 lastT = pathStates[globalInvocationID].lastT;
+            vec4 emission = GetPathInfo(globalInvocationID, lastEmission);
+            vec4 bsdfDirect = GetPathInfo(globalInvocationID, lastBsdfDirect);
+            float pdfDirect = GetPathInfo(globalInvocationID, lastPdfDirect);
+            float pdfIndirect = GetPathInfo(globalInvocationID, lastPdfIndirect);
+            float cosThDirect = GetPathInfo(globalInvocationID, lastCosThDirect);
+            float lightPickProb = GetPathInfo(globalInvocationID, lastLightPickProb);
+            vec4 lastT = GetPathInfo(globalInvocationID, lastT);
             vec4 contribution = bsdfDirect * emission * cosThDirect / (lightPickProb * pdfDirect + pdfIndirect);
-            pathStates[globalInvocationID].Ei += lastT * contribution;
-            pathStates[globalInvocationID].shadowRayBlocked = true;
-            newEiWritten = true;
+            IncByPathInfo(globalInvocationID, Ei, lastT * contribution);
+            SetPathInfo(globalInvocationID, shadowRayBlocked, true);
         }
     }
 
     if (hit.matID < 0)
     {
-        bool lastSpecular = pathStates[globalInvocationID].lastSpecular;
+        bool lastSpecular = GetPathInfo(globalInvocationID, lastSpecular);
         vec4 bg = vec4(0.0f);
 
         if (renderParameters.useEnvironmentMap)
@@ -63,23 +60,20 @@ void main()
         else
             bg = renderParameters.backgroundColor;
 
-        pathStates[globalInvocationID].Ei += bg * T * renderParameters.backgroundIntensity;
-        newEiWritten = true;
+        IncByPathInfo(globalInvocationID, Ei, bg * localT * renderParameters.backgroundIntensity);
         terminated = true;
     }
-    else if (pathStates[globalInvocationID].lightHit)
+    else if (GetPathInfo(globalInvocationID, lightHit))
     {
-        float lightPickProb = pathStates[globalInvocationID].lastLightPickProb;
-        float pdfDirect = pathStates[globalInvocationID].lastPdfDirect;
-        float pdfIndirect = pathStates[globalInvocationID].lastPdfIndirect;
+        float lightPickProb = GetPathInfo(globalInvocationID, lastLightPickProb);
+        float pdfDirect = GetPathInfo(globalInvocationID, lastPdfDirect);
+        float pdfIndirect = GetPathInfo(globalInvocationID, lastPdfIndirect);
         float weight = 1.0f;
         Material mat = materials[hit.matID];
         vec4 emission = mat.Ke * mat.Ns * INVPI;
-        float maxDistance = pathStates[globalInvocationID].maxShadowRayLen;
         if (!blocked)
             weight = pdfIndirect / (pdfDirect * lightPickProb + pdfIndirect);
-        pathStates[globalInvocationID].Ei += T * weight * emission;
-        newEiWritten = true;
+        IncByPathInfo(globalInvocationID, Ei, localT * weight * emission);
         terminated = true;
     }
     else
@@ -88,24 +82,21 @@ void main()
         // Russian roulette
         if (terminated && renderParameters.useRussianRoulette)
         {
-            float contProb = max3(T.xyz);
-            terminated = (rand(pathStates[globalInvocationID].seed) > contProb);
-            T /= contProb;
-            pathStates[globalInvocationID].T = T;
+            float contProb = max3(localT.xyz);
+            terminated = (rand(GetPathInfo(globalInvocationID, seed)) > contProb);
+            localT /= contProb;
+            SetPathInfo(globalInvocationID, T, localT);
         }
 
-        terminated = terminated || T == vec4(0.0f);
+        terminated = terminated || localT == vec4(0.0f);
     }
 
     if(terminated)
     {
-        if (newEiWritten)
-        {
-            ivec2 pixelIndex = pathStates[globalInvocationID].pixelIndex;
-            vec4 result = imageLoad(destTex, pixelIndex);
-            result += vec4(pathStates[globalInvocationID].Ei.xyz, 1.0f);
-            imageStore(destTex, pixelIndex, result);
-        }
+        ivec2 pixelIndex = GetPathInfo(globalInvocationID, pixelIndex);
+        vec4 result = imageLoad(destTex, pixelIndex);
+        result += vec4(GetPathInfo(globalInvocationID, Ei).xyz, 1.0f);
+        imageStore(destTex, pixelIndex, result);
         uint index = atomicWarpAdd(NEW_PATH_QUEUE, 1);
         newPathQueue[index] = globalInvocationID;
         return;
@@ -116,23 +107,22 @@ void main()
         uint numOfLights = renderParameters.numberOfLights;
         if (numOfLights != 0)
         {
-            float randomPick = rand(pathStates[globalInvocationID].seed);
+            float randomPick = rand(GetPathInfo(globalInvocationID, seed));
             float pickProbability = 1.0f / numOfLights;
             int lightIndex = int(floor(randomPick / pickProbability));
             Light light = lights[lightIndex];
             Material mat = materials[light.materialID];
             float pdf;
-            vec4 lightPos = smapleLightSurface(light, hit.position, pdf, pathStates[globalInvocationID].seed);
+            vec4 lightPos = smapleLightSurface(light, hit.position, pdf, GetPathInfo(globalInvocationID, seed));
             vec4 fromHitToLight = lightPos - hit.position;
             float maxShadowLen = length(fromHitToLight) * 0.999f;
-            pathStates[globalInvocationID].maxShadowRayLen = maxShadowLen;
+            SetPathInfo(globalInvocationID, maxShadowRayLen, maxShadowLen);
             fromHitToLight = normalize(fromHitToLight);
-            pathStates[globalInvocationID].shadowDir = fromHitToLight;
-            pathStates[globalInvocationID].shadowOrig = hit.position + 1e-4f * fromHitToLight;
-//            pathStates[globalInvocationID].lastPdfDirect = 0.2387324146378 * pow(maxShadowLen, 2) / (abs(dot(fromHitToLight, normal)) * 0.5f * INVPI);//pow(maxShadowLen, 2) / (pdf * 4.0f * PI * pow(light.sphere.w, 2));
-            pathStates[globalInvocationID].lastPdfDirect = pow(maxShadowLen, 2) / (pdf * 4.0f * PI * pow(light.sphere.w, 2));
-            pathStates[globalInvocationID].lastEmission = mat.Ke * mat.Ns * INVPI;
-            pathStates[globalInvocationID].lastLightPickProb = pickProbability;
+            SetPathInfo(globalInvocationID, shadowDir, fromHitToLight);
+            SetPathInfo(globalInvocationID, shadowOrig, hit.position + 1e-4f * fromHitToLight);
+            SetPathInfo(globalInvocationID, lastPdfDirect, pow(maxShadowLen, 2) / (pdf * 4.0f * PI * pow(light.sphere.w, 2)));
+            SetPathInfo(globalInvocationID, lastEmission, mat.Ke * mat.Ns * INVPI);
+            SetPathInfo(globalInvocationID, lastLightPickProb, pickProbability);
         }
     }
     
