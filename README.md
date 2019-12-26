@@ -2,8 +2,8 @@
 PGR and GMU project. Chess rendered using wavefront path tracing.
 
 # Building
-Clone this repository and use:
-git submodule update --init --recursive
+Clone this repository and use:  
+git submodule update --init --recursive  
 to clone all required libraries.
 Then just use CMake for compiling.
 
