@@ -93,10 +93,14 @@ void main()
 
     if(terminated)
     {
-        ivec2 pixelIndex = GetPathInfo(globalInvocationID, pixelIndex);
-        vec4 result = imageLoad(destTex, pixelIndex);
-        result += vec4(GetPathInfo(globalInvocationID, Ei).xyz, 1.0f);
-        imageStore(destTex, pixelIndex, result);
+        vec3 localEi = GetPathInfo(globalInvocationID, Ei).xyz;
+        if (localEi != vec3(0.0f))
+        {
+            ivec2 pixelIndex = GetPathInfo(globalInvocationID, pixelIndex);
+            vec4 result = imageLoad(destTex, pixelIndex);
+            result += vec4(localEi, 1.0f);
+            imageStore(destTex, pixelIndex, result);
+        }
         uint index = atomicWarpAdd(NEW_PATH_QUEUE, 1);
         newPathQueue[index] = globalInvocationID;
         return;

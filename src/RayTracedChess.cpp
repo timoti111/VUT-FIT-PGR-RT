@@ -15,6 +15,7 @@
 #include "misc/cpp/imgui_stdlib.h"
 #include "Scene/Geometry/Textures.h"
 #include "lodepng.h"
+//#define KERNEL_TIME_MEASURE
 
 RayTracedChess::RayTracedChess() : Application(), scene("res/models/chess/board2/", "res/models/chess/set1/")
 {
@@ -56,7 +57,7 @@ RayTracedChess::RayTracedChess() : Application(), scene("res/models/chess/board2
 
     initComputeShaderImage();
 
-    vars.reCreate<ge::gl::Buffer>("pathsDataBuffer", (4 + 1 + 4 * pathAlive + 64 * pathAlive) * sizeof(unsigned) + 3)->bindBase(GL_SHADER_STORAGE_BUFFER, logicProgram->getBufferBinding("PathsDataBuffer"));
+    vars.reCreate<ge::gl::Buffer>("pathsDataBuffer", (4 + 1 + 4 * pathAlive + 100 * pathAlive) * sizeof(unsigned) + 3)->bindBase(GL_SHADER_STORAGE_BUFFER, logicProgram->getBufferBinding("PathsDataBuffer"));
     vars.reCreate<ge::gl::Buffer>("renderParamsBuffer", sizeof(RenderParameters))->bindBase(GL_UNIFORM_BUFFER, 1);
     resetProgram->getComputeWorkGroupSize(workGroupSizeRes);
     logicProgram->getComputeWorkGroupSize(workGroupSizeLog);
@@ -108,6 +109,13 @@ void RayTracedChess::draw()
     static float WGSizeInvSha = 1.0f / workGroupSizeSha[0];
     static auto renderParamsBuffer = vars.get<ge::gl::Buffer>("renderParamsBuffer");
     static RenderParameters actualRenderParameters;
+    static glm::vec2 logStat(0.0f, 0.0f);
+    static glm::vec2 newStat(0.0f, 0.0f);
+    static glm::vec2 matStat(0.0f, 0.0f);
+    static glm::vec2 extStat(0.0f, 0.0f);
+    static glm::vec2 shadStat(0.0f, 0.0f);
+    static float lastTime;
+    static int iteration;
 
     if (!drawGuiB)
         checkKeys();
@@ -123,16 +131,75 @@ void RayTracedChess::draw()
         resetProgram->dispatch((int)ceil(std::max(pathAlive, width * height) * WGSizeInvRes), 1, 1);
         newPathProgram->dispatch((int)ceil(pathAlive * WGSizeInvNew), 1, 1);
         extRayProgram->dispatch((int)ceil(pathAlive * WGSizeInvExt), 1, 1);
+    #ifdef KERNEL_TIME_MEASURE
+        logStat = glm::vec2(0.0f, 0.0f);
+        newStat = glm::vec2(0.0f, 0.0f);
+        matStat = glm::vec2(0.0f, 0.0f);
+        extStat = glm::vec2(0.0f, 0.0f);
+        shadStat = glm::vec2(0.0f, 0.0f);
+    #endif // DEBUG
+        iteration = 0;
     }
 
     for (int i = 0; i < advanceBy; i++)
     {
+    #ifdef KERNEL_TIME_MEASURE
+        ge::gl::glFinish();
+        lastTime = glfwGetTime();
+    #endif // DEBUG
         logicProgram->dispatch((int)ceil(pathAlive * WGSizeInvLog), 1, 1);
+    #ifdef KERNEL_TIME_MEASURE
+        ge::gl::glFinish();
+        if (iteration > 10)
+            logStat += glm::vec2(glfwGetTime() - lastTime, 1.0f);
+
+        lastTime = glfwGetTime();
+    #endif // DEBUG
         newPathProgram->dispatch((int)ceil(pathAlive * WGSizeInvNew), 1, 1);
+    #ifdef KERNEL_TIME_MEASURE
+        ge::gl::glFinish();
+        if (iteration > 10)
+            newStat += glm::vec2(glfwGetTime() - lastTime, 1.0f);
+
+
+        lastTime = glfwGetTime();
+    #endif // DEBUG
         basicMaterialProgram->dispatch((int)ceil(pathAlive * WGSizeInvMat), 1, 1);
+    #ifdef KERNEL_TIME_MEASURE
+        ge::gl::glFinish();
+        if (iteration > 10)
+            matStat += glm::vec2(glfwGetTime() - lastTime, 1.0f);
+
+
+        lastTime = glfwGetTime();
+    #endif // DEBUG
         extRayProgram->dispatch((int)ceil(pathAlive * WGSizeInvExt), 1, 1);
+    #ifdef KERNEL_TIME_MEASURE
+        ge::gl::glFinish();
+        if (iteration > 10)
+            extStat += glm::vec2(glfwGetTime() - lastTime, 1.0f);
+
+
+        lastTime = glfwGetTime();
+    #endif // DEBUG
         shadRayProgram->dispatch((int)ceil(pathAlive * WGSizeInvSha), 1, 1);
+    #ifdef KERNEL_TIME_MEASURE
+        ge::gl::glFinish();
+        if (iteration > 10)
+            shadStat += glm::vec2(glfwGetTime() - lastTime, 1.0f);
+    #endif // DEBUG
     }
+
+#ifdef KERNEL_TIME_MEASURE
+    if (iteration > 10)
+    {
+        std::cout << "Logic time:         " << logStat.x / logStat.y << std::endl;
+        std::cout << "New Path time:      " << newStat.x / newStat.y << std::endl;
+        std::cout << "Material time:      " << matStat.x / matStat.y << std::endl;
+        std::cout << "Ext Ray Cast time:  " << extStat.x / extStat.y << std::endl;
+        std::cout << "Shad Ray Cast time: " << shadStat.x / shadStat.y << std::endl;
+    }
+#endif // DEBUG
 
     basicDrawProgram->use();
     ge::gl::glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -142,6 +209,7 @@ void RayTracedChess::draw()
 
     drawGui(drawGuiB);
     swap();
+    iteration++;
 }
 
 void RayTracedChess::mouseButtonEvent(int button, int action, int mods)

@@ -172,7 +172,7 @@ uint atomicWarpAdd(uint counterIndex, int number)
     if (gl_SubGroupInvocationARB == leader)
         res = atomicAdd(queueCounters[counterIndex], number * bitCount(mask));
     res = readInvocationARB(res, leader);
-    return res + bitCount(mask & ((1 << gl_SubGroupInvocationARB) - 1));
+    return res + bitCount(mask & uint(gl_SubGroupLtMaskARB));
 }
 
 vec4 smapleLightSurface(Light light, vec4 hitPosition, inout float pdf, inout uint seed)

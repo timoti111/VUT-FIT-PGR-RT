@@ -23,8 +23,6 @@ layout(binding = 0) buffer PathsDataBuffer
     // SOA
     vec4 orig[NUM_PATHS];
     vec4 dir[NUM_PATHS];
-    vec4 hitP[NUM_PATHS];
-    vec4 hitN[NUM_PATHS];
     vec4 shadowOrig[NUM_PATHS];
     vec4 shadowDir[NUM_PATHS];
     vec4 T[NUM_PATHS];
@@ -33,10 +31,13 @@ layout(binding = 0) buffer PathsDataBuffer
     vec4 lastBsdfDirect[NUM_PATHS];
     vec4 lastEmission[NUM_PATHS];
     ivec2 pixelIndex[NUM_PATHS];
+    vec4 hitP[NUM_PATHS];
+    vec4 hitN[NUM_PATHS];
     vec2 hitUV[NUM_PATHS];
     float t[NUM_PATHS];
     int matID[NUM_PATHS];
     int triIndex[NUM_PATHS];
+    uint pathLen[NUM_PATHS];
     float maxShadowRayLen[NUM_PATHS];
     bool shadowRayBlocked[NUM_PATHS];
     bool lightHit[NUM_PATHS];
@@ -46,7 +47,6 @@ layout(binding = 0) buffer PathsDataBuffer
     float lastPdfIndirect[NUM_PATHS];
     float lastLightPickProb[NUM_PATHS];
     uint seed[NUM_PATHS];
-    uint pathLen[NUM_PATHS];
 };
 
 
